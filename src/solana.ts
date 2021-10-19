@@ -1,0 +1,156 @@
+import { PrismaClient } from '.prisma/client';
+import {
+    Connection,
+    ConfirmedSignatureInfo,
+    SignaturesForAddressOptions,
+    PublicKey,
+    ParsedConfirmedTransaction,
+    PartiallyDecodedInstruction
+} from '@solana/web3.js';
+import Bottleneck from 'bottleneck';
+
+import { log } from './logger';
+import { ETLParams } from './types';
+
+/**
+ * SolanaETL defines an abstract base class for all Solana ETLs
+ */
+export abstract class SolanaETL {
+    connection: Connection;
+    prisma: PrismaClient;
+    limiter: SolanaLimiter;
+
+    constructor(params: ETLParams) {
+        this.connection = params.connection;
+        this.prisma = params.prisma;
+        this.limiter = SolanaLimiter.getInstance(params.rateLimit);
+    }
+
+    /**
+     * Updates database and prints warning on missing transaction.
+     */
+    protected handleMissingTransaction(signature: string, id: number) {
+        log.warn(`Missing transaction ${signature}`);
+        return this.prisma.stakeProgramSignature.update({
+            where: { id: id },
+            data: { processed: true }
+        });
+    }
+
+    /**
+     * Filters and formats transacgion instructions for the given account.
+     */
+    protected formatAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
+        return tx.transaction.message.instructions
+            .filter((i) => i.programId.equals(account))
+            .map((instruction, idx) => {
+                const inner = tx.meta?.innerInstructions?.filter((i) => i.index === idx);
+                if (!inner) {
+                    throw new Error(`Missing inner instructions: ${tx.transaction.signatures[0]}`);
+                }
+                return { inner, outer: instruction as PartiallyDecodedInstruction };
+            });
+    }
+
+    /**
+     * Generates all unprocessed signature and transaction pairs.
+     */
+    protected async *generateUnprocessedTxs<
+        T extends {
+            signature: string;
+        }
+    >(
+        nextSigs: (b: number) => Promise<T[]>
+    ): AsyncGenerator<
+        {
+            signature: T;
+            tx: ParsedConfirmedTransaction | null;
+        },
+        void,
+        unknown
+    > {
+        const batchSize = 100; // Todo: determine best batch size
+
+        for (let finalBatch = false; !finalBatch; ) {
+            const sigs = await nextSigs(batchSize);
+
+            if (sigs.length === 0) {
+                return;
+            }
+
+            if (sigs.length < batchSize) {
+                finalBatch = true;
+            }
+
+            const txs = await this.limiter.schedule(() =>
+                this.connection.getParsedConfirmedTransactions(sigs.map((s) => s.signature))
+            );
+
+            const batch = sigs.map((s, i) => ({ signature: s, tx: txs[i] }));
+
+            for (const item of batch) {
+                yield item;
+            }
+        }
+    }
+
+    /**
+     * Generates all new confirmed stake signatures in chronological order.
+     */
+    protected async *generateSignatures(account: PublicKey, until?: string) {
+        const opts: SignaturesForAddressOptions = {
+            limit: 1000, // Max is 1000
+            until: until
+        };
+
+        // Returns signatures in reverse chronological order
+        const next = () => {
+            return this.limiter.schedule(() =>
+                this.connection.getSignaturesForAddress(account, opts)
+            );
+        };
+        const signatures: ConfirmedSignatureInfo[] = [];
+
+        for (let sigs = await next(); sigs.length > 0; sigs = await next()) {
+            signatures.push(...sigs);
+            opts.before = sigs[sigs.length - 1]?.signature;
+        }
+
+        // Reverse signatures to generate in chronological order
+        for (const signature of signatures.reverse()) {
+            if (signature.err) {
+                log.warn(`Skipping failed signature ${signature.signature} ${signature.err}`);
+                continue;
+            }
+            yield signature;
+        }
+    }
+}
+
+/**
+ * SolanaLimiter can be used to limit the rate of requests to a
+ * Solana JSON RPC API.
+ */
+class SolanaLimiter {
+    private static instance?: SolanaLimiter;
+    private bottleneck: Bottleneck;
+
+    private constructor(minTime: number) {
+        this.bottleneck = new Bottleneck({ minTime });
+    }
+
+    public static getInstance(minTime: number = 250) {
+        if (SolanaLimiter.instance) {
+            return SolanaLimiter.instance;
+        }
+        SolanaLimiter.instance = new SolanaLimiter(minTime);
+        return SolanaLimiter.instance;
+    }
+
+    /**
+     * Add a job to the queue.
+     */
+    public schedule<T>(cb: () => Promise<T>): Promise<T> {
+        return this.bottleneck.schedule(cb);
+    }
+}

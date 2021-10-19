@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  // linux-musl is necessary for it to work with alpine
+  binaryTargets = ["native", "linux-musl"]
+  provider      = "prisma-client-js"
+}
+
+////////////////////////////
+// Stake Program
+////////////////////////////
+
+model StakeProgramSignature {
+  id                            Int                            @id @default(autoincrement())
+  signature                     String                         @unique
+  blockTime                     DateTime
+  slot                          BigInt                         @db.BigInt
+  recentBlockHash               String?
+  memo                          String?
+  fee                           BigInt?                        @db.BigInt
+  processed                     Boolean                        @default(false)
+  claim                         Claim[]
+  initInstructions              InitInstruction[]
+  registerCommunityInstructions RegisterCommunityInstruction[]
+  stakeInitInstructions         StakeInitInstruction[]
+  stakeInstructions             StakeInstruction[]
+  withdrawUnboundInstructions   WithdrawUnboundInstruction[]
+  claimInstructions             ClaimInstruction[]
+
+  @@index([processed])
+  @@index([blockTime])
+}
+
+enum ClaimOrigin {
+  ClaimInstruction
+  StakeInstruction
+}
+
+model Claim {
+  id               Int                   @id @default(autoincrement())
+  signature        StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId      Int
+  amount           BigInt                @db.BigInt
+  authority        String
+  source           String
+  destination      String
+  claimOrigin      ClaimOrigin
+  claimInstruction ClaimInstruction?
+  stakeInstruction StakeInstruction?
+
+  addressStakedCommunityAccount   String?
+  addressStakedCommunityCommunity String?
+  @@index([destination])
+}
+
+model InitInstruction {
+  id                      Int                   @id @default(autoincrement())
+  signature               StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId             Int
+  unbondingDuration       Int
+  startTime               DateTime              @db.Timestamp
+  payer                   String
+  settingsAccount         String
+  poolAuthority           String
+  rewardPool              String
+  zeeTokenMint            String
+  feeBeneficiaryAuthority String
+  feeBeneficiary          String
+  splTokenProgam          String
+}
+
+model RegisterCommunityInstruction {
+  id                            Int                   @id @default(autoincrement())
+  signature                     StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId                   Int
+  payer                         String
+  communityOwner                String
+  communityAccount              String
+  primaryBeneficiaryAuthority   String
+  primaryBeneficiary            String
+  secondaryBeneficiaryAuthority String
+  secondaryBeneficiary          String
+}
+
+model StakeInitInstruction {
+  id                Int                   @id @default(autoincrement())
+  signature         StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId       Int
+  payer             String
+  staker            String
+  stakerFund        String
+  stakerBeneficiary String
+  communityAccount  String
+  stakeAccount      String
+  zeeTokenMint      String
+}
+
+model StakeInstruction {
+  id                            Int                   @id @default(autoincrement())
+  signature                     StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId                   Int
+  claim                         Claim                 @relation(fields: [claimId], references: [id])
+  claimId                       Int                   @unique
+  stake                         BigInt                @db.BigInt
+  payer                         String
+  staker                        String
+  stakerBeneficiary             String
+  stakerFund                    String
+  stakerZeeTokenAccount         String
+  community                     String
+  communityPrimaryBeneficiary   String
+  communitySecondaryBeneficiary String
+  poolAuthority                 String
+  rewardPool                    String
+  settings                      String
+  feeBeneficiary                String
+  stakeAccount                  String
+}
+
+model WithdrawUnboundInstruction {
+  id                    Int                   @id @default(autoincrement())
+  signature             StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId           Int
+  payer                 String
+  staker                String
+  stakerFund            String
+  stakerZeeTokenAccount String
+  community             String
+  settings              String
+  poolAuthority         String
+  stakeAccount          String
+}
+
+model ClaimInstruction {
+  id                       Int                   @id @default(autoincrement())
+  signature                StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId              Int
+  claim                    Claim                 @relation(fields: [claimId], references: [id])
+  claimId                  Int                   @unique
+  payer                    String
+  beneficiaryAuthority     String
+  beneficiaryAccount       String
+  authorityZeeTokenAccount String
+  settings                 String
+  poolAuthority            String
+  rewardPool               String
+}
+
+////////////////////////////
+// ZEE SPL Transfer
+////////////////////////////
+
+model ZeeSplSignature {
+  id              Int      @id @default(autoincrement())
+  signature       String   @unique
+  blockTime       DateTime
+  slot            BigInt   @db.BigInt
+  recentBlockHash String?
+  memo            String?
+  fee             BigInt?  @db.BigInt
+  processed       Boolean  @default(false)
+
+  @@index([processed])
+  @@index([blockTime])
+}
