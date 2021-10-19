@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+    db:
+        container_name: zeeETL
+        image: postgres:13.3-alpine
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: ${PG_PASSWORD:-dummy}
+        ports:
+            - '5432:5432'
+    pgadmin:
+        container_name: pgadmin4
+        image: dpage/pgadmin4
+        restart: always
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-factoshi@example.com}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-dummy}
+        ports:
+            - '5050:80'
