@@ -79,13 +79,13 @@ function loadAppConfig(): Config {
     const user = getEnvVar('POSTGRES_USER', parseStringVar, 'postgres');
     const host = getEnvVar('POSTGRES_HOST', parseStringVar, 'localhost');
     const port = getEnvVar('POSTGRES_PORT', parseStringVar, '5432');
-    const name = getEnvVar('POSTGRES_NAME', parseStringVar, 'zee-etl');
+    const name = getEnvVar('POSTGRES_DATABASE', parseStringVar, 'zee-etl');
     const pgURL = `postgresql://${user}:${password}@${host}:${port}/${name}`;
 
     return {
         solana: {
             url: getEnvVar('SOLANA_URL', parseStringVar),
-            rateLimit: getEnvVar('SOLANA_RATE_LIMIT', parseInt),
+            rateLimit: getEnvVar('SOLANA_RATE_LIMIT', parseInt, 250),
             stakeProgramId: getEnvVar('STAKING_PROGRAM_ID', parseKeyVar)
         },
         log: {
