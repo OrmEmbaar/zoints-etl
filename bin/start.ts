@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import 'dotenv/config';
 import config from './config';
 import { Connection } from '@solana/web3.js';
 import { PrismaClient } from '@prisma/client';
@@ -13,11 +12,11 @@ async function main() {
     });
 
     const connection = new Connection(config.solana.url, 'confirmed');
-    const prisma = new PrismaClient({ datasources: { db: { url: config.DBURL } } });
+    const prisma = new PrismaClient({ datasources: { db: { url: config.postgresURL } } });
     const etl = new ETL({
         connection,
         prisma,
-        stakeProgramId: config.stakeProgramId,
+        stakeProgramId: config.solana.stakeProgramId,
         rateLimit: config.solana.rateLimit
     });
     etl.on('error', (err) => log.error('ETL error', err));

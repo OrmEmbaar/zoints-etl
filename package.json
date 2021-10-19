@@ -1,13 +1,13 @@
 {
     "name": "zee-etl",
     "description": "ETL for Solana ZEE transactions",
-    "author": "Alex Carrithers",
+    "author": "OrmEmbaar",
     "version": "0.0.0",
     "main": "bin/start.ts",
     "types": "src/index.d.ts",
     "scripts": {
-        "prisma:deploy": "prisma migrate deploy",
         "start": "nodemon bin/start.ts",
+        "prisma:deploy": "node dist/bin/migrate.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "rm -rf dist && tsc",
         "build:check": "tsc --noEmit"
@@ -19,6 +19,7 @@
         "bottleneck": "^2.19.5",
         "bs58": "^4.0.1",
         "dotenv": "^10.0.0",
+        "dotenv-expand": "^5.1.0",
         "tslog": "^3.2.2"
     },
     "devDependencies": {

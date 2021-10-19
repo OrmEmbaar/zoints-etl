@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
 import { PublicKey } from '@solana/web3.js';
 import { TLogLevelName } from 'tslog';
 
@@ -5,9 +7,9 @@ export interface Config {
     solana: {
         url: string;
         rateLimit: number;
+        stakeProgramId: PublicKey;
     };
-    stakeProgramId: PublicKey;
-    DBURL: string;
+    postgresURL: string;
     log: {
         level: TLogLevelName;
         silent: boolean;
@@ -70,23 +72,29 @@ function parseBool(envVar: string): boolean {
 }
 
 function loadAppConfig(): Config {
-    const user = getEnvVar('DB_USER', parseStringVar, 'postgres');
-    const password = getEnvVar('DB_PASSWORD', parseStringVar);
-    const host = getEnvVar('DB_HOST', parseStringVar, 'localhost');
-    const port = getEnvVar('DB_PORT', parseStringVar, '5432');
-    const name = getEnvVar('DB_NAME', parseStringVar, 'zee-etl');
+    var env = dotenv.config();
+    dotenvExpand(env);
+
+    const password = getEnvVar('POSTGRES_PASSWORD', parseStringVar);
+    const user = getEnvVar('POSTGRES_USER', parseStringVar, 'postgres');
+    const host = getEnvVar('POSTGRES_HOST', parseStringVar, 'localhost');
+    const port = getEnvVar('POSTGRES_PORT', parseStringVar, '5432');
+    const name = getEnvVar('POSTGRES_NAME', parseStringVar, 'zee-etl');
+    const pgURL = `postgresql://${user}:${password}@${host}:${port}/${name}`;
 
     return {
         solana: {
             url: getEnvVar('SOLANA_URL', parseStringVar),
-            rateLimit: getEnvVar('SOLANA_RATE_LIMIT', parseInt)
+            rateLimit: getEnvVar('SOLANA_RATE_LIMIT', parseInt),
+            stakeProgramId: getEnvVar('STAKING_PROGRAM_ID', parseKeyVar)
         },
         log: {
             level: getEnvVar('LOG_LVL', parseLogLevelName, 'info'),
             silent: getEnvVar('LOG_SILENT', parseBool, false)
         },
-        stakeProgramId: getEnvVar('STAKING_PROGRAM_ID', parseKeyVar),
-        DBURL: `postgresql://${user}:${password}@${host}:${port}/${name}`
+        // Setting POSTGRES_URL can override other PG vars. This is
+        // useful when working directly with the prisma CLI.
+        postgresURL: process.env.POSTGRES_URL || pgURL
     };
 }
 
