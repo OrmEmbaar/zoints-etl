@@ -2,12 +2,11 @@
     "name": "zee-etl",
     "description": "ETL for Solana ZEE transactions",
     "author": "OrmEmbaar",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "main": "bin/start.ts",
     "types": "src/index.d.ts",
     "scripts": {
         "start": "nodemon bin/start.ts",
-        "prisma:deploy": "node dist/bin/migrate.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "rm -rf dist && tsc",
         "build:check": "tsc --noEmit"
@@ -20,6 +19,7 @@
         "bs58": "^4.0.1",
         "dotenv": "^10.0.0",
         "dotenv-expand": "^5.1.0",
+        "prisma": "^3.3.0",
         "tslog": "^3.2.2"
     },
     "devDependencies": {
@@ -27,11 +27,18 @@
         "@types/dotenv": "^8.2.0",
         "@types/node": "^16.10.9",
         "nodemon": "^2.0.13",
-        "prisma": "^3.2.1",
         "ts-node": "^10.3.0",
         "typescript": "^4.4.4"
     },
-    "keywords": [],
+    "peerDependencies": {
+        "@solana/web3.js": "^1.29"
+    },
+    "keywords": [
+        "zee",
+        "zoints",
+        "solana",
+        "etl"
+    ],
     "files": [
         "dist",
         "prisma"
