@@ -1,7 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/node
 import config from './config';
 import { Connection } from '@solana/web3.js';
-import { PrismaClient } from '@prisma/client';
 import { log } from '../src/logger';
 import { ETL } from '../src/etl';
 
@@ -12,10 +11,9 @@ async function main() {
     });
 
     const connection = new Connection(config.solana.url, 'confirmed');
-    const prisma = new PrismaClient({ datasources: { db: { url: config.postgresURL } } });
     const etl = new ETL({
         connection,
-        prisma,
+        postgresURL: config.postgresURL,
         stakeProgramId: config.solana.stakeProgramId,
         rateLimit: config.solana.rateLimit
     });

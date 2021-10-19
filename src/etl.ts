@@ -1,3 +1,4 @@
+import { PrismaClient } from '.prisma/client';
 import { EventEmitter } from 'stream';
 import { log } from './logger';
 
@@ -11,10 +12,12 @@ export class ETL extends EventEmitter {
     private stakeProgramETL: StakeProgramETL;
     private running: boolean = false;
     private shouldStop: boolean = false;
+    client: PrismaClient;
 
     constructor(params: ETLParams) {
         super();
-        this.stakeProgramETL = new StakeProgramETL(params);
+        this.client = new PrismaClient({ datasources: { db: { url: params.postgresURL } } });
+        this.stakeProgramETL = new StakeProgramETL(params, this.client);
     }
 
     private async sync() {

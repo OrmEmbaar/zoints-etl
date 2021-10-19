@@ -17,10 +17,10 @@ export default class StakeProgramETL extends SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
 
-    constructor(params: ETLParams) {
-        super(params);
+    constructor(params: ETLParams, prisma: PrismaClient) {
+        super(params, prisma);
         this.connection = params.connection;
-        this.prisma = params.prisma;
+        this.prisma = prisma;
         this.stakeProgramId = params.stakeProgramId;
     }
 

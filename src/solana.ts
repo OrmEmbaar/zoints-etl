@@ -20,9 +20,9 @@ export abstract class SolanaETL {
     prisma: PrismaClient;
     limiter: SolanaLimiter;
 
-    constructor(params: ETLParams) {
+    constructor(params: ETLParams, prisma: PrismaClient) {
         this.connection = params.connection;
-        this.prisma = params.prisma;
+        this.prisma = prisma;
         this.limiter = SolanaLimiter.getInstance(params.rateLimit);
     }
 
