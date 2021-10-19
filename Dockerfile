@@ -34,5 +34,5 @@ COPY --from=Installer /install/node_modules ./node_modules
 COPY package.json .
 COPY prisma ./prisma
 
-ENV POSTGRES_USER="postgres" POSTGRES_HOST="localhost" POSTGRES_PORT="5432" POSTGRES_NAME="zee-etl"
-CMD [ "node", "./bin/start.js" ]
+ENTRYPOINT [ "node" ]
+CMD [ "bin/start.js" ]
