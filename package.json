@@ -21,8 +21,9 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "rm -rf dist && tsc",
         "build:check": "tsc --noEmit",
-        "prepub": "rm -rf dist && tsc && cp -r prisma package*.json dist",
-        "pub": "npm publish ./dist --access public --dry-run"
+        "prepub": "rm -rf dist && tsc && cp -r prisma README.md package*.json dist",
+        "pub": "npm publish ./dist --access public --dry-run",
+        "postpub": "rm -rf dist"
     },
     "dependencies": {
         "@prisma/client": "^3.3.0",
