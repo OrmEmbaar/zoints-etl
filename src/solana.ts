@@ -12,6 +12,11 @@ import Bottleneck from 'bottleneck';
 import { log } from './logger';
 import { ETLParams } from './types';
 
+export interface UnprocessedSignature
+    extends Omit<ConfirmedSignatureInfo, 'err' | 'blockTime' | 'memo'> {
+    blockTime: Date;
+}
+
 /**
  * SolanaETL defines an abstract base class for all Solana ETLs
  */
@@ -27,17 +32,6 @@ export abstract class SolanaETL {
     }
 
     /**
-     * Updates database and prints warning on missing transaction.
-     */
-    protected handleMissingTransaction(signature: string, id: number) {
-        log.warn(`Missing transaction ${signature}`);
-        return this.prisma.stakeProgramSignature.update({
-            where: { id: id },
-            data: { processed: true }
-        });
-    }
-
-    /**
      * Filters and formats transacgion instructions for the given account.
      */
     protected formatAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
@@ -48,14 +42,14 @@ export abstract class SolanaETL {
                 if (!inner) {
                     throw new Error(`Missing inner instructions: ${tx.transaction.signatures[0]}`);
                 }
-                return { inner, outer: instruction as PartiallyDecodedInstruction };
+                return { instruction: instruction as PartiallyDecodedInstruction, inner };
             });
     }
 
     /**
      * Generates all unprocessed signature and transaction pairs.
      */
-    protected async *generateUnprocessedTxs<
+    protected async *getUnprocessedPairs<
         T extends {
             signature: string;
         }
@@ -95,9 +89,13 @@ export abstract class SolanaETL {
     }
 
     /**
-     * Generates all new confirmed stake signatures in chronological order.
+     * Syncs all new signatures for the given account. Returns the number of signatures synced.
      */
-    protected async *generateSignatures(account: PublicKey, until?: string) {
+    protected async syncAccountSignatures<T>(
+        account: PublicKey,
+        insert: (data: UnprocessedSignature) => Promise<T>,
+        until?: string
+    ) {
         const opts: SignaturesForAddressOptions = {
             limit: 1000, // Max is 1000
             until: until
@@ -117,13 +115,25 @@ export abstract class SolanaETL {
         }
 
         // Reverse signatures to generate in chronological order
+        let inserted = 0;
         for (const signature of signatures.reverse()) {
             if (signature.err) {
                 log.warn(`Skipping failed signature ${signature.signature} ${signature.err}`);
                 continue;
             }
-            yield signature;
+            if (!signature.blockTime) {
+                log.error(`Missing block time ${signature.signature}`);
+                continue;
+            }
+            const data = {
+                blockTime: new Date(signature.blockTime * 1000),
+                signature: signature.signature,
+                slot: signature.slot
+            };
+            await insert(data);
+            inserted++;
         }
+        return inserted;
     }
 }
 

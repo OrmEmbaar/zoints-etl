@@ -22,7 +22,6 @@ model StakeProgramSignature {
   blockTime                     DateTime
   slot                          BigInt                         @db.BigInt
   recentBlockHash               String?
-  memo                          String?
   fee                           BigInt?                        @db.BigInt
   processed                     Boolean                        @default(false)
   claim                         Claim[]

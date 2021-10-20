@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PrismaClient, StakeProgramSignature } from '@prisma/client';
+import { Connection, ParsedConfirmedTransaction, PublicKey } from '@solana/web3.js';
 
 import { log } from '../logger';
-import { SolanaETL } from '../solana';
+import { SolanaETL, UnprocessedSignature } from '../solana';
 import { ETLParams } from '../types';
 import { Instruction } from './instruction';
 
@@ -25,12 +25,39 @@ export default class StakeProgramETL extends SolanaETL {
     }
 
     /**
-     * Processes new signature transactions.
+     * Inserts all new confirmed signatures into DB in chronological order.
      */
-    private async processTransactions(): Promise<void> {
-        let count = 0;
+    private async syncSignatures(): Promise<void> {
+        const res = await this.prisma.stakeProgramSignature.findFirst({
+            orderBy: { id: 'desc' },
+            rejectOnNotFound: false
+        });
 
-        const nextBatch = async (batchSize: number) => {
+        const insert = async (data: UnprocessedSignature) => {
+            return this.prisma.stakeProgramSignature.create({ data });
+        };
+
+        const inserted = await this.syncAccountSignatures(
+            this.stakeProgramId,
+            insert,
+            res?.signature
+        );
+
+        if (inserted > 0) {
+            log.info(`Found ${inserted} new stake program signatures`);
+        }
+    }
+
+    private handleMissingTransaction(sig: StakeProgramSignature) {
+        log.warn(`Missing transaction ${sig.signature}`);
+        return this.prisma.stakeProgramSignature.update({
+            where: { id: sig.id },
+            data: { processed: true }
+        });
+    }
+
+    private async syncInstructions(): Promise<void> {
+        const getUnprocessedSigs = (batchSize: number) => {
             return this.prisma.stakeProgramSignature.findMany({
                 take: batchSize,
                 where: { processed: false },
@@ -38,20 +65,18 @@ export default class StakeProgramETL extends SolanaETL {
             });
         };
 
-        for await (const u of this.generateUnprocessedTxs(nextBatch)) {
-            const { tx, signature } = u;
-
+        for await (const { tx, signature } of this.getUnprocessedPairs(getUnprocessedSigs)) {
             if (tx === null) {
-                await this.handleMissingTransaction(signature.signature, signature.id);
+                await this.handleMissingTransaction(signature);
                 continue;
             }
 
-            const parsedInstrucs: Instruction[] = [];
+            const parsedInstructions: Instruction[] = [];
             const instructions = this.formatAccountInstructions(tx, this.stakeProgramId);
 
-            for (const { outer, inner } of instructions) {
-                const parsedInstruc = Instruction.new(signature.id, outer, inner[0]);
-                parsedInstrucs.push(parsedInstruc);
+            for (const { instruction, inner } of instructions) {
+                const parsedInstruc = Instruction.new(signature.id, instruction, inner[0]);
+                parsedInstructions.push(parsedInstruc);
             }
 
             await this.prisma.$transaction([
@@ -63,46 +88,8 @@ export default class StakeProgramETL extends SolanaETL {
                         recentBlockHash: tx.transaction.message.recentBlockhash
                     }
                 }),
-                ...parsedInstrucs.map((i) => i.insert(this.prisma))
+                ...parsedInstructions.map((i) => i.insert(this.prisma))
             ]);
-
-            count++;
-        }
-
-        if (count > 0) {
-            log.info(`Processed ${count} new signatures`);
-        }
-    }
-
-    /**
-     * Inserts all new confirmed signatures into DB in chronological order.
-     */
-    private async gatherSignatures(): Promise<void> {
-        let count = 0;
-
-        const res = await this.prisma.stakeProgramSignature.findFirst({
-            orderBy: { id: 'desc' },
-            rejectOnNotFound: false
-        });
-
-        for await (const s of this.generateSignatures(this.stakeProgramId, res?.signature)) {
-            // Signatures are confirmed so not expecting this to happen.
-            if (!s.blockTime) {
-                log.error(`Missing block time ${s.signature}`);
-                continue;
-            }
-            await this.prisma.stakeProgramSignature.create({
-                data: {
-                    blockTime: new Date(s.blockTime * 1000),
-                    signature: s.signature,
-                    slot: s.slot,
-                    memo: s.memo
-                }
-            });
-            count++;
-        }
-        if (count > 0) {
-            log.info(`Found ${count} new signatures`);
         }
     }
 
@@ -110,7 +97,7 @@ export default class StakeProgramETL extends SolanaETL {
      * Syncs the Stake program ETL.
      */
     async sync(): Promise<void> {
-        await this.gatherSignatures();
-        await this.processTransactions();
+        await this.syncSignatures();
+        await this.syncInstructions();
     }
 }
