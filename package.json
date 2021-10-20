@@ -54,7 +54,7 @@
     "files": [
         "src",
         "bin",
-        "prisma",
+        "prisma/schema.prisma",
         "README.md"
     ]
 }
