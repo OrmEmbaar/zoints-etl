@@ -16,6 +16,7 @@
     },
     "homepage": "https://github.com/Factoshi/zee-etl#readme",
     "scripts": {
+        "postinstall": "prisma generate",
         "start": "nodemon bin/start.ts",
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "rm -rf dist && tsc",
