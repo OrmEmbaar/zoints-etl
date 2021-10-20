@@ -3,7 +3,7 @@
     "description": "ETL for Solana ZEE transactions",
     "author": "OrmEmbaar",
     "version": "0.1.0",
-    "main": "dist/bin/start.js",
+    "main": "dist/src/index.js",
     "types": "dist/src/index.d.ts",
     "module": "dist/src/index.js",
     "repository": {
