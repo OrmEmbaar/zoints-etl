@@ -3,6 +3,7 @@ import { EventEmitter } from 'stream';
 import { log } from './logger';
 
 import StakeProgramETL from './stakeProgram';
+import TokenMintETL from './tokenBalances';
 import { ETLParams } from './types';
 
 /**
@@ -10,6 +11,7 @@ import { ETLParams } from './types';
  */
 export class ETL extends EventEmitter {
     private stakeProgramETL: StakeProgramETL;
+    private tokenMintETL: TokenMintETL;
     private running: boolean = false;
     private shouldStop: boolean = false;
     client: PrismaClient;
@@ -18,10 +20,12 @@ export class ETL extends EventEmitter {
         super();
         this.client = new PrismaClient({ datasources: { db: { url: params.postgresURL } } });
         this.stakeProgramETL = new StakeProgramETL(params, this.client);
+        this.tokenMintETL = new TokenMintETL(params, this.client);
     }
 
     private async sync() {
         await this.stakeProgramETL.sync();
+        await this.tokenMintETL.sync();
     }
 
     /**

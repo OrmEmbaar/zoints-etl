@@ -156,15 +156,26 @@ model ClaimInstruction {
 ////////////////////////////
 
 model ZeeSplSignature {
-  id              Int      @id @default(autoincrement())
-  signature       String   @unique
+  id              Int                   @id @default(autoincrement())
+  signature       String                @unique
   blockTime       DateTime
-  slot            BigInt   @db.BigInt
+  slot            BigInt                @db.BigInt
   recentBlockHash String?
-  memo            String?
-  fee             BigInt?  @db.BigInt
-  processed       Boolean  @default(false)
+  fee             BigInt?               @db.BigInt
+  processed       Boolean               @default(false)
+  postBalances    PostTransferBalance[]
 
   @@index([processed])
   @@index([blockTime])
+}
+
+model PostTransferBalance {
+  signature      ZeeSplSignature @relation(fields: [signatureId], references: [id])
+  signatureId    Int
+  account        String
+  amount         BigInt          @db.BigInt
+  uiAmount       Float?
+  uiAmountString String?
+
+  @@id([signatureId, account])
 }
