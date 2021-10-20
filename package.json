@@ -22,7 +22,7 @@
         "build": "rm -rf dist && tsc",
         "build:check": "tsc --noEmit",
         "prepub": "rm -rf dist && tsc && cp -r prisma package*.json dist",
-        "pub": "npm publish ./dist --access public"
+        "pub": "npm publish ./dist --access public --dry-run"
     },
     "dependencies": {
         "@prisma/client": "^3.3.0",
@@ -54,6 +54,7 @@
     "files": [
         "src",
         "bin",
-        "prisma"
+        "prisma",
+        "README.md"
     ]
 }
