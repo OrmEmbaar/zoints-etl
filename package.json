@@ -2,7 +2,7 @@
     "name": "@factoshi/zee-etl",
     "description": "ETL for Solana ZEE transactions",
     "author": "OrmEmbaar",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "main": "src/index.js",
     "types": "src/index.d.ts",
     "module": "src/index.js",
