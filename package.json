@@ -1,10 +1,11 @@
 {
-    "name": "zee-etl",
+    "name": "@factoshi/zee-etl",
     "description": "ETL for Solana ZEE transactions",
     "author": "OrmEmbaar",
     "version": "0.1.0",
-    "main": "bin/start.ts",
-    "types": "src/index.d.ts",
+    "main": "dist/bin/start.js",
+    "types": "dist/src/index.d.ts",
+    "module": "dist/src/index.js",
     "scripts": {
         "start": "nodemon bin/start.ts",
         "test": "echo \"Error: no test specified\" && exit 1",
@@ -39,7 +40,8 @@
         "etl"
     ],
     "files": [
-        "dist",
+        "dist/src",
+        "dist/bin",
         "prisma"
     ]
 }
