@@ -2,8 +2,9 @@ import { PrismaClient, StakeProgramSignature } from '@prisma/client';
 import { Connection, PublicKey } from '@solana/web3.js';
 
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
-import { ETLParams } from '../../types';
+import { ETLEvents, ETLParams } from '../../types';
 import { Instruction } from './instruction';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
 export * from './instruction';
 
@@ -16,8 +17,8 @@ export default class StakeProgramETL extends SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
 
-    constructor(params: ETLParams, prisma: PrismaClient) {
-        super(params, prisma);
+    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
+        super(params, prisma, ee);
         this.connection = params.connection;
         this.prisma = prisma;
         this.stakeProgramId = params.stakeProgramId;
@@ -34,14 +35,17 @@ export default class StakeProgramETL extends SolanaETL {
         const insert = async (data: UnprocessedSignature) => {
             return this.prisma.stakeProgramSignature.create({ data });
         };
-        await this.syncAccountSignatures(this.stakeProgramId, insert, res?.signature);
+        const n = await this.syncAccountSignatures(this.stakeProgramId, insert, res?.signature);
+        if (n > 0) {
+            this.event.emit('newSignatures', 'stake program', n);
+        }
     }
 
     /**
      *
      */
     private handleMissingTransaction(sig: StakeProgramSignature) {
-        this.emit('warn', `Missing transaction ${sig.signature}`);
+        this.event.emit('warn', `Missing transaction ${sig.signature}`);
         return this.prisma.stakeProgramSignature.update({
             where: { id: sig.id },
             data: { processed: true }
@@ -90,7 +94,9 @@ export default class StakeProgramETL extends SolanaETL {
                 ...parsedInstructions.map((i) => i.insert(this.prisma))
             ]);
         }
-        this.emit('newInstructions', count, this.stakeProgramId);
+        if (count > 0) {
+            this.event.emit('newInstructions', count);
+        }
     }
 
     /**

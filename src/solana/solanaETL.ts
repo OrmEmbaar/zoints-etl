@@ -11,34 +11,27 @@ import {
 import Bottleneck from 'bottleneck';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { ETLParams } from '../types';
+import { ETLEvents, ETLParams } from '../types';
 
 export interface UnprocessedSignature
     extends Omit<ConfirmedSignatureInfo, 'err' | 'blockTime' | 'memo'> {
     blockTime: Date;
 }
 
-interface SolanaEvents {
-    warn: (message: string) => void;
-    error: (message: string, error: Error) => void;
-    newSignatures: (count: number, account: PublicKey) => void;
-    newPostBalance: (count: number, account: PublicKey) => void;
-    newInstructions: (count: number, account: PublicKey) => void;
-}
-
 /**
  * SolanaETL defines an abstract base class for all Solana ETLs
  */
-export abstract class SolanaETL extends TypedEmitter<SolanaEvents> {
+export abstract class SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
     limiter: SolanaLimiter;
+    event: TypedEmitter<ETLEvents>;
 
-    constructor(params: ETLParams, prisma: PrismaClient) {
-        super();
+    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
         this.connection = params.connection;
         this.prisma = prisma;
         this.limiter = SolanaLimiter.getInstance(params.rateLimit);
+        this.event = ee;
     }
 
     /**
@@ -93,11 +86,11 @@ export abstract class SolanaETL extends TypedEmitter<SolanaEvents> {
         let inserted = 0;
         for (const sig of signatures.reverse()) {
             if (sig.err) {
-                this.emit('warn', `Skipping failed signature ${sig.signature} ${sig.err}`);
+                this.event.emit('warn', `Skipping failed signature ${sig.signature} ${sig.err}`);
                 continue;
             }
             if (!sig.blockTime) {
-                this.emit('warn', `Missing block time ${sig.signature}`);
+                this.event.emit('warn', `Missing block time ${sig.signature}`);
                 continue;
             }
             const data = {
@@ -108,7 +101,7 @@ export abstract class SolanaETL extends TypedEmitter<SolanaEvents> {
             await insert(data);
             inserted++;
         }
-        this.emit('newSignatures', inserted, account);
+        return inserted;
     }
 
     /**

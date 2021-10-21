@@ -1,6 +1,6 @@
 #!/usr/bin/node
 import config from './config';
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { log } from '../src/logger';
 import { ETL } from '../src/etl';
 
@@ -17,8 +17,15 @@ async function main() {
         stakeProgramId: config.solana.stakeProgramId,
         rateLimit: config.solana.rateLimit
     });
-    etl.on('error', (err) => log.error('ETL error', err));
+
+    etl.on('newSignatures', (type, count) => log.debug(`Found ${count} new ${type} signatures`));
+    etl.on('newInstructions', (c) => log.debug(`Saved ${c} new instructions`));
+    etl.on('newTransfers', (c) => log.debug(`Saved ${c} new balances`));
+    etl.on('warn', (msg) => log.warn(msg));
+    etl.on('error', (msg, err) => log.error(msg, err));
+
     etl.start();
+    log.info('Started ETL');
 }
 
 main().catch((e) => log.error(`Error starting ETL`, e));

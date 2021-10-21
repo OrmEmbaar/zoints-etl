@@ -1,7 +1,8 @@
 import { PrismaClient, ZeeSplSignature, PostTransferBalance } from '@prisma/client';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { ETLParams } from '../../types';
+import { ETLEvents, ETLParams } from '../../types';
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
 
 /**
@@ -12,8 +13,8 @@ export default class TokenMintETL extends SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
 
-    constructor(params: ETLParams, prisma: PrismaClient) {
-        super(params, prisma);
+    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
+        super(params, prisma, ee);
         this.connection = params.connection;
         this.prisma = prisma;
     }
@@ -37,11 +38,14 @@ export default class TokenMintETL extends SolanaETL {
             return this.prisma.zeeSplSignature.create({ data });
         };
 
-        await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
+        const inserted = await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
+        if (inserted > 0) {
+            this.event.emit('newSignatures', 'token mint', inserted);
+        }
     }
 
     private handleMissingTransaction(sig: ZeeSplSignature) {
-        this.emit('warn', `Missing transaction ${sig.signature}`);
+        this.event.emit('warn', `Missing transaction ${sig.signature}`);
         return this.prisma.zeeSplSignature.update({
             where: { id: sig.id },
             data: { processed: true }
@@ -102,7 +106,9 @@ export default class TokenMintETL extends SolanaETL {
 
             count += balances.length;
         }
-        this.emit('newPostBalance', count, new PublicKey(initInstruction.zeeTokenMint));
+        if (count > 0) {
+            this.event.emit('newTransfers', count);
+        }
     }
 
     /**

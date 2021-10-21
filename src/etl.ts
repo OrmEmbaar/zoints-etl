@@ -1,31 +1,31 @@
 import { PrismaClient } from '.prisma/client';
-import { EventEmitter } from 'stream';
-import { log } from './logger';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
 import StakeProgramETL from './solana/stakeProgram';
 import TokenMintETL from './solana/tokenBalances';
-import { ETLParams } from './types';
+import { ETLParams, ETLEvents } from './types';
 
 /**
  * ETL extracts, transforms and loads data into the database from relevant sources.
  */
-export class ETL extends EventEmitter {
+export class ETL {
     private stakeProgramETL: StakeProgramETL;
     private tokenMintETL: TokenMintETL;
     private running: boolean = false;
     private shouldStop: boolean = false;
+    event: TypedEmitter<ETLEvents>;
     client: PrismaClient;
 
     constructor(params: ETLParams) {
-        super();
+        this.event = new TypedEmitter<ETLEvents>();
         this.client = new PrismaClient({ datasources: { db: { url: params.postgresURL } } });
-        this.stakeProgramETL = new StakeProgramETL(params, this.client);
-        this.tokenMintETL = new TokenMintETL(params, this.client);
+
+        this.stakeProgramETL = new StakeProgramETL(params, this.client, this.event);
+        this.tokenMintETL = new TokenMintETL(params, this.client, this.event);
     }
 
-    private async sync() {
-        await this.stakeProgramETL.sync();
-        await this.tokenMintETL.sync();
+    get on() {
+        return this.event.on.bind(this.event);
     }
 
     /**
@@ -35,18 +35,18 @@ export class ETL extends EventEmitter {
         if (this.running) {
             return;
         }
-        log.info('ETL started');
         this.running = true;
         while (!this.shouldStop) {
             try {
                 await this.sync();
                 await sleep(500);
             } catch (err: any) {
-                this.emit('error', err);
+                this.event.emit('error', 'ETL error', err);
                 await sleep(60000);
             }
         }
         this.running = false;
+        this.event.emit('done');
     }
 
     /**
@@ -56,13 +56,16 @@ export class ETL extends EventEmitter {
         if (!this.running) {
             return;
         }
-        log.info('ETL stopped');
         this.shouldStop = true;
         while (this.running) {
             await sleep(20);
         }
         this.shouldStop = false;
-        this.emit('done');
+    }
+
+    private async sync() {
+        await this.stakeProgramETL.sync();
+        await this.tokenMintETL.sync();
     }
 }
 
