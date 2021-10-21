@@ -3,7 +3,6 @@ import { Connection, PublicKey } from '@solana/web3.js';
 
 import { ETLParams } from '../types';
 import { SolanaETL, UnprocessedSignature } from '../solana';
-import { log } from '../logger';
 
 /**
  * TokenMintETL extracts, transforms and loads ZEE token transfers
@@ -38,21 +37,18 @@ export default class TokenMintETL extends SolanaETL {
             return this.prisma.zeeSplSignature.create({ data });
         };
 
-        const inserted = await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
-        if (inserted > 0) {
-            log.info(`Found ${inserted} new ZEE token mint signatures`);
-        }
+        await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
     }
 
     private handleMissingTransaction(sig: ZeeSplSignature) {
-        log.warn(`Missing transaction ${sig.signature}`);
+        this.emit('warn', `Missing transaction ${sig.signature}`);
         return this.prisma.zeeSplSignature.update({
             where: { id: sig.id },
             data: { processed: true }
         });
     }
 
-    private async syncBalances(): Promise<void> {
+    private async syncBalanceChanges(): Promise<void> {
         const getUnprocessedSigs = (size: number) => {
             return this.prisma.zeeSplSignature.findMany({
                 take: size,
@@ -66,7 +62,7 @@ export default class TokenMintETL extends SolanaETL {
             rejectOnNotFound: true
         });
 
-        let balancStateTransitionCount = 0;
+        let count = 0;
         for await (const { tx, signature } of this.getUnprocessedPairs(getUnprocessedSigs)) {
             if (tx === null) {
                 await this.handleMissingTransaction(signature);
@@ -89,23 +85,24 @@ export default class TokenMintETL extends SolanaETL {
                     uiAmountString: pb.uiTokenAmount.uiAmountString || null
                 });
             }
-            balancStateTransitionCount += balances.length;
+
+            const signatureUpdate = {
+                where: { id: signature.id },
+                data: {
+                    processed: true,
+                    fee: tx.meta?.fee,
+                    recentBlockHash: tx.transaction.message.recentBlockhash
+                }
+            };
 
             await this.prisma.$transaction([
-                this.prisma.zeeSplSignature.update({
-                    where: { id: signature.id },
-                    data: {
-                        processed: true,
-                        fee: tx.meta?.fee,
-                        recentBlockHash: tx.transaction.message.recentBlockhash
-                    }
-                }),
+                this.prisma.zeeSplSignature.update(signatureUpdate),
                 ...balances.map((data) => this.prisma.postTransferBalance.create({ data }))
             ]);
+
+            count += balances.length;
         }
-        if (balancStateTransitionCount > 1) {
-            log.info(`Found ${balancStateTransitionCount} new balance state transitions`);
-        }
+        this.emit('newPostBalance', count, new PublicKey(initInstruction.zeeTokenMint));
     }
 
     /**
@@ -113,6 +110,6 @@ export default class TokenMintETL extends SolanaETL {
      */
     async sync(): Promise<void> {
         await this.syncSignatures();
-        await this.syncBalances();
+        await this.syncBalanceChanges();
     }
 }

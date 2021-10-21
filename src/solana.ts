@@ -5,11 +5,12 @@ import {
     SignaturesForAddressOptions,
     PublicKey,
     ParsedConfirmedTransaction,
-    PartiallyDecodedInstruction
+    PartiallyDecodedInstruction,
+    ParsedInnerInstruction
 } from '@solana/web3.js';
 import Bottleneck from 'bottleneck';
+import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { log } from './logger';
 import { ETLParams } from './types';
 
 export interface UnprocessedSignature
@@ -17,15 +18,24 @@ export interface UnprocessedSignature
     blockTime: Date;
 }
 
+interface SolanaEvents {
+    warn: (message: string) => void;
+    error: (message: string, error: Error) => void;
+    newSignatures: (count: number, account: PublicKey) => void;
+    newPostBalance: (count: number, account: PublicKey) => void;
+    newInstructions: (count: number, account: PublicKey) => void;
+}
+
 /**
  * SolanaETL defines an abstract base class for all Solana ETLs
  */
-export abstract class SolanaETL {
+export abstract class SolanaETL extends TypedEmitter<SolanaEvents> {
     connection: Connection;
     prisma: PrismaClient;
     limiter: SolanaLimiter;
 
     constructor(params: ETLParams, prisma: PrismaClient) {
+        super();
         this.connection = params.connection;
         this.prisma = prisma;
         this.limiter = SolanaLimiter.getInstance(params.rateLimit);
@@ -35,15 +45,70 @@ export abstract class SolanaETL {
      * Filters and formats transacgion instructions for the given account.
      */
     protected formatAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
-        return tx.transaction.message.instructions
-            .filter((i) => i.programId.equals(account))
-            .map((instruction, idx) => {
-                const inner = tx.meta?.innerInstructions?.filter((i) => i.index === idx);
-                if (!inner) {
-                    throw new Error(`Missing inner instructions: ${tx.transaction.signatures[0]}`);
-                }
-                return { instruction: instruction as PartiallyDecodedInstruction, inner };
-            });
+        const formatted: {
+            instruction: PartiallyDecodedInstruction;
+            inner: ParsedInnerInstruction[];
+        }[] = [];
+
+        for (const [idx, instruction] of tx.transaction.message.instructions.entries()) {
+            if (!instruction.programId.equals(account)) {
+                continue;
+            }
+            const inner = tx.meta?.innerInstructions?.filter((i) => i.index === idx);
+            if (!inner) {
+                throw new Error(`Missing inner instructions: ${tx.transaction.signatures[0]}`);
+            }
+            formatted.push({ instruction: instruction as PartiallyDecodedInstruction, inner });
+        }
+        return formatted;
+    }
+
+    /**
+     * Syncs all new signatures for the given account. Returns the number of signatures synced.
+     */
+    protected async syncAccountSignatures<T>(
+        account: PublicKey,
+        insert: (data: UnprocessedSignature) => Promise<T>,
+        until?: string
+    ) {
+        const opts: SignaturesForAddressOptions = {
+            limit: 1000,
+            until: until
+        };
+
+        // Returns signatures in reverse chronological order
+        const next = () => {
+            return this.limiter.schedule(() =>
+                this.connection.getSignaturesForAddress(account, opts)
+            );
+        };
+        const signatures: ConfirmedSignatureInfo[] = [];
+
+        for (let sigs = await next(); sigs.length > 0; sigs = await next()) {
+            signatures.push(...sigs);
+            opts.before = sigs[sigs.length - 1]?.signature;
+        }
+
+        // Reverse signatures to generate in chronological order
+        let inserted = 0;
+        for (const sig of signatures.reverse()) {
+            if (sig.err) {
+                this.emit('warn', `Skipping failed signature ${sig.signature} ${sig.err}`);
+                continue;
+            }
+            if (!sig.blockTime) {
+                this.emit('warn', `Missing block time ${sig.signature}`);
+                continue;
+            }
+            const data = {
+                blockTime: new Date(sig.blockTime * 1000),
+                signature: sig.signature,
+                slot: sig.slot
+            };
+            await insert(data);
+            inserted++;
+        }
+        this.emit('newSignatures', inserted, account);
     }
 
     /**
@@ -86,54 +151,6 @@ export abstract class SolanaETL {
                 yield item;
             }
         }
-    }
-
-    /**
-     * Syncs all new signatures for the given account. Returns the number of signatures synced.
-     */
-    protected async syncAccountSignatures<T>(
-        account: PublicKey,
-        insert: (data: UnprocessedSignature) => Promise<T>,
-        until?: string
-    ) {
-        const opts: SignaturesForAddressOptions = {
-            limit: 1000, // Max is 1000
-            until: until
-        };
-
-        // Returns signatures in reverse chronological order
-        const next = () => {
-            return this.limiter.schedule(() =>
-                this.connection.getSignaturesForAddress(account, opts)
-            );
-        };
-        const signatures: ConfirmedSignatureInfo[] = [];
-
-        for (let sigs = await next(); sigs.length > 0; sigs = await next()) {
-            signatures.push(...sigs);
-            opts.before = sigs[sigs.length - 1]?.signature;
-        }
-
-        // Reverse signatures to generate in chronological order
-        let inserted = 0;
-        for (const signature of signatures.reverse()) {
-            if (signature.err) {
-                log.warn(`Skipping failed signature ${signature.signature} ${signature.err}`);
-                continue;
-            }
-            if (!signature.blockTime) {
-                log.error(`Missing block time ${signature.signature}`);
-                continue;
-            }
-            const data = {
-                blockTime: new Date(signature.blockTime * 1000),
-                signature: signature.signature,
-                slot: signature.slot
-            };
-            await insert(data);
-            inserted++;
-        }
-        return inserted;
     }
 }
 
