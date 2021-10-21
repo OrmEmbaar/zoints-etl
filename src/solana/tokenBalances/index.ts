@@ -1,8 +1,8 @@
 import { PrismaClient, ZeeSplSignature, PostTransferBalance } from '@prisma/client';
 import { Connection, PublicKey } from '@solana/web3.js';
 
-import { ETLParams } from '../types';
-import { SolanaETL, UnprocessedSignature } from '../solana';
+import { ETLParams } from '../../types';
+import { SolanaETL, UnprocessedSignature } from '../solanaETL';
 
 /**
  * TokenMintETL extracts, transforms and loads ZEE token transfers

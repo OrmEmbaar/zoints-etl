@@ -11,7 +11,7 @@ import {
 import Bottleneck from 'bottleneck';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { ETLParams } from './types';
+import { ETLParams } from '../types';
 
 export interface UnprocessedSignature
     extends Omit<ConfirmedSignatureInfo, 'err' | 'blockTime' | 'memo'> {

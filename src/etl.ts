@@ -2,8 +2,8 @@ import { PrismaClient } from '.prisma/client';
 import { EventEmitter } from 'stream';
 import { log } from './logger';
 
-import StakeProgramETL from './stakeProgram';
-import TokenMintETL from './tokenBalances';
+import StakeProgramETL from './solana/stakeProgram';
+import TokenMintETL from './solana/tokenBalances';
 import { ETLParams } from './types';
 
 /**
