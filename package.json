@@ -57,5 +57,9 @@
         "bin",
         "prisma/schema.prisma",
         "README.md"
-    ]
+    ],
+    "bin": {
+        "migrate": "./bin/migrate.js",
+        "start": "./bin/start.js"
+    }
 }
