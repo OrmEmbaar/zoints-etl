@@ -1,5 +1,11 @@
-import { PrismaClient, PrismaPromise } from '@prisma/client';
-import { AmountSchema, decodeInstructionData, InitSchema, Instructions } from '@zoints/staking';
+import { PrismaClient, PrismaPromise } from '../../../prisma/client';
+import {
+    AmountSchema,
+    AuthoritySchema,
+    decodeInstructionData,
+    InitSchema,
+    Instructions
+} from '@zoints/staking';
 import {
     PartiallyDecodedInstruction,
     PublicKey,
@@ -24,8 +30,8 @@ export abstract class Instruction {
         switch (d.instructionId) {
             case Instructions.Initialize:
                 return new InitInstruction(sigId, accounts, d);
-            case Instructions.RegisterCommunity:
-                return new RegisterCommunityInstruction(sigId, accounts);
+            case Instructions.RegisterEndpoint:
+                return new RegisterEndpointInstruction(sigId, accounts, d);
             case Instructions.InitializeStake:
                 return new InitStakeInstruction(sigId, accounts);
             case Instructions.Stake:
@@ -34,6 +40,10 @@ export abstract class Instruction {
                 return new WithdrawUnboundInstruction(sigId, accounts);
             case Instructions.Claim:
                 return new ClaimInstruction(sigId, accounts, inner);
+            case Instructions.TransferEndpoint:
+                return new TransferEndpointInstruction(sigId, accounts, d, inner);
+            case Instructions.ChangeBeneficiaries:
+                return new ChangeBeneficiariesInstruction(sigId, accounts, inner);
         }
     }
 
@@ -50,8 +60,6 @@ export class InitInstruction extends Instruction {
     poolAuthority: string;
     rewardPool: string;
     zeeTokenMint: string;
-    feeBeneficiaryAuthority: string;
-    feeBeneficiary: string;
     splTokenProgam: string;
     startTime: Date;
     unbondingDuration: number;
@@ -64,9 +72,7 @@ export class InitInstruction extends Instruction {
         this.poolAuthority = accounts[2].toBase58();
         this.rewardPool = accounts[3].toBase58();
         this.zeeTokenMint = accounts[4].toBase58();
-        this.feeBeneficiaryAuthority = accounts[5].toBase58();
-        this.feeBeneficiary = accounts[6].toBase58();
-        this.splTokenProgam = accounts[8].toBase58();
+        this.splTokenProgam = accounts[6].toBase58();
         this.startTime = instruction.startTime;
         this.unbondingDuration = instruction.unbondingDuration.toNumber();
     }
@@ -76,30 +82,34 @@ export class InitInstruction extends Instruction {
     }
 }
 
-export class RegisterCommunityInstruction extends Instruction {
+export class RegisterEndpointInstruction extends Instruction {
     signatureId: number;
     payer: string;
-    communityOwner: string;
-    communityAccount: string;
+    endpointAccount: string;
+    endpointOwnerPubkey: string;
     primaryBeneficiaryAuthority: string;
-    primaryBeneficiary: string;
+    primaryBeneficiaryAccount: string;
     secondaryBeneficiaryAuthority: string;
-    secondaryBeneficiary: string;
+    secondaryBeneficiaryAccount: string;
+    authorityAddress: string;
+    authorityType: number;
 
-    constructor(sigId: number, accounts: PublicKey[]) {
+    constructor(sigId: number, accounts: PublicKey[], { authority }: AuthoritySchema) {
         super();
         this.signatureId = sigId;
         this.payer = accounts[0].toBase58();
-        this.communityOwner = accounts[1].toBase58();
-        this.communityAccount = accounts[2].toBase58();
+        this.endpointAccount = accounts[1].toBase58();
+        this.endpointOwnerPubkey = accounts[2].toBase58();
         this.primaryBeneficiaryAuthority = accounts[3].toBase58();
-        this.primaryBeneficiary = accounts[4].toBase58();
+        this.primaryBeneficiaryAccount = accounts[4].toBase58();
         this.secondaryBeneficiaryAuthority = accounts[5].toBase58();
-        this.secondaryBeneficiary = accounts[6].toBase58();
+        this.secondaryBeneficiaryAccount = accounts[6].toBase58();
+        this.authorityAddress = authority.address.toBase58();
+        this.authorityType = authority.authorityType;
     }
 
     insert(prisma: PrismaClient) {
-        return prisma.registerCommunityInstruction.create({
+        return prisma.registerEndpointInstruction.create({
             data: { ...this }
         });
     }
@@ -111,9 +121,8 @@ export class InitStakeInstruction extends Instruction {
     staker: string;
     stakerFund: string;
     stakerBeneficiary: string;
-    communityAccount: string;
+    endpointAccount: string;
     stakeAccount: string;
-    zeeTokenMint: string;
 
     constructor(sigId: number, accounts: PublicKey[]) {
         super();
@@ -122,13 +131,12 @@ export class InitStakeInstruction extends Instruction {
         this.staker = accounts[1].toBase58();
         this.stakerFund = accounts[2].toBase58();
         this.stakerBeneficiary = accounts[3].toBase58();
-        this.communityAccount = accounts[4].toBase58();
+        this.endpointAccount = accounts[4].toBase58();
         this.stakeAccount = accounts[5].toBase58();
-        this.zeeTokenMint = accounts[6].toBase58();
     }
 
     insert(prisma: PrismaClient) {
-        return prisma.stakeInitInstruction.create({ data: { ...this } });
+        return prisma.initStakeInstruction.create({ data: { ...this } });
     }
 }
 
@@ -139,13 +147,12 @@ export class StakeInstruction extends Instruction {
     stakerBeneficiary: string;
     stakerFund: string;
     stakerZeeTokenAccount: string;
-    community: string;
-    communityPrimaryBeneficiary: string;
-    communitySecondaryBeneficiary: string;
+    endpoint: string;
+    endpointPrimaryBeneficiary: string;
+    endpointSecondaryBeneficiary: string;
     poolAuthority: string;
     rewardPool: string;
     settings: string;
-    feeBeneficiary: string;
     stakeAccount: string;
     stake: bigint;
     claim: Claim;
@@ -163,14 +170,13 @@ export class StakeInstruction extends Instruction {
         this.stakerBeneficiary = accounts[2].toBase58();
         this.stakerFund = accounts[3].toBase58();
         this.stakerZeeTokenAccount = accounts[4].toBase58();
-        this.community = accounts[5].toBase58();
-        this.communityPrimaryBeneficiary = accounts[6].toBase58();
-        this.communitySecondaryBeneficiary = accounts[7].toBase58();
+        this.endpoint = accounts[5].toBase58();
+        this.endpointPrimaryBeneficiary = accounts[6].toBase58();
+        this.endpointSecondaryBeneficiary = accounts[7].toBase58();
         this.poolAuthority = accounts[8].toBase58();
         this.rewardPool = accounts[9].toBase58();
         this.settings = accounts[10].toBase58();
-        this.feeBeneficiary = accounts[11].toBase58();
-        this.stakeAccount = accounts[12].toBase58();
+        this.stakeAccount = accounts[11].toBase58();
         this.stake = instruction.amount;
         this.claim = new Claim(
             sigId,
@@ -188,13 +194,11 @@ export class StakeInstruction extends Instruction {
                 stakerBeneficiary: this.stakerBeneficiary,
                 stakerFund: this.stakerFund,
                 stakerZeeTokenAccount: this.stakerZeeTokenAccount,
-                community: this.community,
-                communityPrimaryBeneficiary: this.communityPrimaryBeneficiary,
-                communitySecondaryBeneficiary: this.communitySecondaryBeneficiary,
+                endpoint: this.endpoint,
+                endpointPrimaryBeneficiary: this.endpointPrimaryBeneficiary,
+                endpointSecondaryBeneficiary: this.endpointSecondaryBeneficiary,
                 poolAuthority: this.poolAuthority,
-                rewardPool: this.rewardPool,
                 settings: this.settings,
-                feeBeneficiary: this.feeBeneficiary,
                 stakeAccount: this.stakeAccount,
                 stake: this.stake,
                 claim: { create: { ...this.claim } },
@@ -207,25 +211,25 @@ export class StakeInstruction extends Instruction {
 export class WithdrawUnboundInstruction extends Instruction {
     signatureId: number;
     payer: string;
+    stakeAccount: string;
     staker: string;
     stakerFund: string;
     stakerZeeTokenAccount: string;
-    community: string;
+    endpoint: string;
     settings: string;
     poolAuthority: string;
-    stakeAccount: string;
 
     constructor(sigId: number, accounts: PublicKey[]) {
         super();
         this.signatureId = sigId;
         this.payer = accounts[0].toBase58();
-        this.staker = accounts[1].toBase58();
-        this.stakerFund = accounts[2].toBase58();
-        this.stakerZeeTokenAccount = accounts[3].toBase58();
-        this.community = accounts[4].toBase58();
-        this.settings = accounts[5].toBase58();
-        this.poolAuthority = accounts[6].toBase58();
-        this.stakeAccount = accounts[7].toBase58();
+        this.stakeAccount = accounts[1].toBase58();
+        this.staker = accounts[2].toBase58();
+        this.stakerFund = accounts[3].toBase58();
+        this.stakerZeeTokenAccount = accounts[4].toBase58();
+        this.endpoint = accounts[5].toBase58();
+        this.settings = accounts[6].toBase58();
+        this.poolAuthority = accounts[7].toBase58();
     }
 
     insert(prisma: PrismaClient) {
@@ -241,7 +245,6 @@ export class ClaimInstruction extends Instruction {
     authorityZeeTokenAccount: string;
     settings: string;
     poolAuthority: string;
-    rewardPool: string;
     claim: Claim;
 
     constructor(sigId: number, accounts: PublicKey[], inner: ParsedInnerInstruction) {
@@ -253,7 +256,6 @@ export class ClaimInstruction extends Instruction {
         this.authorityZeeTokenAccount = accounts[3].toBase58();
         this.settings = accounts[4].toBase58();
         this.poolAuthority = accounts[5].toBase58();
-        this.rewardPool = accounts[6].toBase58();
         this.claim = new Claim(
             sigId,
             inner.instructions[0] as ParsedInstruction,
@@ -270,7 +272,113 @@ export class ClaimInstruction extends Instruction {
                 authorityZeeTokenAccount: this.authorityZeeTokenAccount,
                 settings: this.settings,
                 poolAuthority: this.poolAuthority,
-                rewardPool: this.rewardPool,
+                claim: { create: { ...this.claim } },
+                signature: { connect: { id: this.signatureId } }
+            }
+        });
+    }
+}
+
+export class TransferEndpointInstruction extends Instruction {
+    signatureId: number;
+    payer: string;
+    endpoint: string;
+    endpointOwnerAccount: string;
+    endpointOwner: string;
+    recipient: string;
+    authorityAddress: string;
+    authorityType: number;
+    claim: Claim;
+
+    constructor(
+        sigId: number,
+        accounts: PublicKey[],
+        { authority }: AuthoritySchema,
+        inner: ParsedInnerInstruction
+    ) {
+        super();
+        this.signatureId = sigId;
+        this.payer = accounts[0].toBase58();
+        this.endpoint = accounts[1].toBase58();
+        this.endpointOwnerAccount = accounts[2].toBase58();
+        this.endpointOwner = accounts[3].toBase58();
+        this.recipient = accounts[4].toBase58();
+        this.authorityAddress = authority.address.toBase58();
+        this.authorityType = authority.authorityType;
+        this.claim = new Claim(
+            sigId,
+            inner.instructions[0] as ParsedInstruction,
+            ClaimOrigin.ClaimInstruction
+        );
+    }
+
+    insert(prisma: PrismaClient) {
+        return prisma.transferEndpointInstruction.create({
+            data: {
+                payer: this.payer,
+                endpoint: this.endpoint,
+                endpointOwnerAccount: this.endpointOwnerAccount,
+                endpointOwner: this.endpointOwner,
+                recipient: this.recipient,
+                authorityAddress: this.authorityAddress,
+                authorityType: this.authorityType,
+                claim: { create: { ...this.claim } },
+                signature: { connect: { id: this.signatureId } }
+            }
+        });
+    }
+}
+
+export class ChangeBeneficiariesInstruction extends Instruction {
+    signatureId: number;
+    payer: string;
+    endpoint: string;
+    endpointOwnerAccount: string;
+    endpointOwner: string;
+    oldPrimaryBeneficiaryAccount: string;
+    oldSecondaryBeneficiaryAccount: string;
+    newPrimaryBeneficiaryAuthority: string;
+    newPrimaryBeneficiaryAccount: string;
+    newSecondaryBeneficiaryAuthority: string;
+    newSecondaryBeneficiaryAccount: string;
+    settings: string;
+    claim: Claim;
+
+    constructor(sigId: number, accounts: PublicKey[], inner: ParsedInnerInstruction) {
+        super();
+        this.signatureId = sigId;
+        this.payer = accounts[0].toBase58();
+        this.endpoint = accounts[1].toBase58();
+        this.endpointOwnerAccount = accounts[2].toBase58();
+        this.endpointOwner = accounts[3].toBase58();
+        this.oldPrimaryBeneficiaryAccount = accounts[4].toBase58();
+        this.oldSecondaryBeneficiaryAccount = accounts[5].toBase58();
+        this.newPrimaryBeneficiaryAuthority = accounts[6].toBase58();
+        this.newPrimaryBeneficiaryAccount = accounts[7].toBase58();
+        this.newSecondaryBeneficiaryAuthority = accounts[8].toBase58();
+        this.newSecondaryBeneficiaryAccount = accounts[9].toBase58();
+        this.settings = accounts[10].toBase58();
+        this.claim = new Claim(
+            sigId,
+            inner.instructions[0] as ParsedInstruction,
+            ClaimOrigin.ClaimInstruction
+        );
+    }
+
+    insert(prisma: PrismaClient) {
+        return prisma.changeBeneficiariesInstruction.create({
+            data: {
+                payer: this.payer,
+                endpoint: this.endpoint,
+                endpointOwnerAccount: this.endpointOwnerAccount,
+                endpointOwner: this.endpointOwner,
+                oldPrimaryBeneficiaryAccount: this.oldPrimaryBeneficiaryAccount,
+                oldSecondaryBeneficiaryAccount: this.oldSecondaryBeneficiaryAccount,
+                newPrimaryBeneficiaryAuthority: this.newPrimaryBeneficiaryAuthority,
+                newPrimaryBeneficiaryAccount: this.newPrimaryBeneficiaryAccount,
+                newSecondaryBeneficiaryAuthority: this.newSecondaryBeneficiaryAuthority,
+                newSecondaryBeneficiaryAccount: this.newSecondaryBeneficiaryAccount,
+                settings: this.settings,
                 claim: { create: { ...this.claim } },
                 signature: { connect: { id: this.signatureId } }
             }

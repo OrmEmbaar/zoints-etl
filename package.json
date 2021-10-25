@@ -27,7 +27,7 @@
     },
     "dependencies": {
         "@prisma/client": "^3.3.0",
-        "@zoints/staking": "^0.8.2",
+        "@zoints/staking": "^1.0.0",
         "bottleneck": "^2.19.5",
         "bs58": "^4.0.1",
         "dotenv": "^10.0.0",
@@ -60,7 +60,7 @@
         "README.md"
     ],
     "bin": {
-        "migrate": "./bin/migrate.js",
-        "start": "./bin/start.js"
+        "etl-migrate": "bin/migrate.js",
+        "etl-start": "bin/start.js"
     }
 }
