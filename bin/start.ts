@@ -1,6 +1,6 @@
-#!/usr/bin/node
+#!/usr/bin/env node
 import config from './config';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { log } from '../src/logger';
 import { ETL } from '../src/etl';
 
