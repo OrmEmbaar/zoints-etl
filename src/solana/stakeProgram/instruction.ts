@@ -284,7 +284,7 @@ export class TransferEndpointInstruction extends Instruction {
     payer: string;
     endpoint: string;
     endpointOwnerAccount: string;
-    endpointOwner: string;
+    endpointOwnerSigner: string;
     recipient: string;
     authorityAddress: string;
     authorityType: number;
@@ -295,7 +295,7 @@ export class TransferEndpointInstruction extends Instruction {
         this.payer = accounts[0].toBase58();
         this.endpoint = accounts[1].toBase58();
         this.endpointOwnerAccount = accounts[2].toBase58();
-        this.endpointOwner = accounts[3].toBase58();
+        this.endpointOwnerSigner = accounts[3].toBase58();
         this.recipient = accounts[4].toBase58();
         this.authorityAddress = authority.address.toBase58();
         this.authorityType = authority.authorityType;
@@ -313,7 +313,7 @@ export class ChangeBeneficiariesInstruction extends Instruction {
     payer: string;
     endpoint: string;
     endpointOwnerAccount: string;
-    endpointOwner: string;
+    endpointOwnerSigner: string;
     oldPrimaryBeneficiaryAccount: string;
     oldSecondaryBeneficiaryAccount: string;
     newPrimaryBeneficiaryAuthority: string;
@@ -328,7 +328,7 @@ export class ChangeBeneficiariesInstruction extends Instruction {
         this.payer = accounts[0].toBase58();
         this.endpoint = accounts[1].toBase58();
         this.endpointOwnerAccount = accounts[2].toBase58();
-        this.endpointOwner = accounts[3].toBase58();
+        this.endpointOwnerSigner = accounts[3].toBase58();
         this.oldPrimaryBeneficiaryAccount = accounts[4].toBase58();
         this.oldSecondaryBeneficiaryAccount = accounts[5].toBase58();
         this.newPrimaryBeneficiaryAuthority = accounts[6].toBase58();

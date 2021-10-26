@@ -155,7 +155,7 @@ model TransferEndpointInstruction {
   payer                String
   endpoint             String
   endpointOwnerAccount String
-  endpointOwner        String
+  endpointOwnerSigner  String
   recipient            String
   authorityAddress     String
   authorityType        Int                   @db.SmallInt
@@ -168,7 +168,7 @@ model ChangeBeneficiariesInstruction {
   payer                            String
   endpoint                         String
   endpointOwnerAccount             String
-  endpointOwner                    String
+  endpointOwnerSigner              String
   oldPrimaryBeneficiaryAccount     String
   oldSecondaryBeneficiaryAccount   String
   newPrimaryBeneficiaryAuthority   String
