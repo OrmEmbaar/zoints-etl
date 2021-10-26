@@ -41,9 +41,9 @@ export abstract class Instruction {
             case Instructions.Claim:
                 return new ClaimInstruction(sigId, accounts, inner);
             case Instructions.TransferEndpoint:
-                return new TransferEndpointInstruction(sigId, accounts, d, inner);
+                return new TransferEndpointInstruction(sigId, accounts, d);
             case Instructions.ChangeBeneficiaries:
-                return new ChangeBeneficiariesInstruction(sigId, accounts, inner);
+                return new ChangeBeneficiariesInstruction(sigId, accounts);
         }
     }
 
@@ -288,14 +288,8 @@ export class TransferEndpointInstruction extends Instruction {
     recipient: string;
     authorityAddress: string;
     authorityType: number;
-    claim: Claim;
 
-    constructor(
-        sigId: number,
-        accounts: PublicKey[],
-        { authority }: AuthoritySchema,
-        inner: ParsedInnerInstruction
-    ) {
+    constructor(sigId: number, accounts: PublicKey[], { authority }: AuthoritySchema) {
         super();
         this.signatureId = sigId;
         this.payer = accounts[0].toBase58();
@@ -305,26 +299,11 @@ export class TransferEndpointInstruction extends Instruction {
         this.recipient = accounts[4].toBase58();
         this.authorityAddress = authority.address.toBase58();
         this.authorityType = authority.authorityType;
-        this.claim = new Claim(
-            sigId,
-            inner.instructions[0] as ParsedInstruction,
-            ClaimOrigin.ClaimInstruction
-        );
     }
 
     insert(prisma: PrismaClient) {
         return prisma.transferEndpointInstruction.create({
-            data: {
-                payer: this.payer,
-                endpoint: this.endpoint,
-                endpointOwnerAccount: this.endpointOwnerAccount,
-                endpointOwner: this.endpointOwner,
-                recipient: this.recipient,
-                authorityAddress: this.authorityAddress,
-                authorityType: this.authorityType,
-                claim: { create: { ...this.claim } },
-                signature: { connect: { id: this.signatureId } }
-            }
+            data: { ...this }
         });
     }
 }
@@ -342,9 +321,8 @@ export class ChangeBeneficiariesInstruction extends Instruction {
     newSecondaryBeneficiaryAuthority: string;
     newSecondaryBeneficiaryAccount: string;
     settings: string;
-    claim: Claim;
 
-    constructor(sigId: number, accounts: PublicKey[], inner: ParsedInnerInstruction) {
+    constructor(sigId: number, accounts: PublicKey[]) {
         super();
         this.signatureId = sigId;
         this.payer = accounts[0].toBase58();
@@ -358,30 +336,11 @@ export class ChangeBeneficiariesInstruction extends Instruction {
         this.newSecondaryBeneficiaryAuthority = accounts[8].toBase58();
         this.newSecondaryBeneficiaryAccount = accounts[9].toBase58();
         this.settings = accounts[10].toBase58();
-        this.claim = new Claim(
-            sigId,
-            inner.instructions[0] as ParsedInstruction,
-            ClaimOrigin.ClaimInstruction
-        );
     }
 
     insert(prisma: PrismaClient) {
         return prisma.changeBeneficiariesInstruction.create({
-            data: {
-                payer: this.payer,
-                endpoint: this.endpoint,
-                endpointOwnerAccount: this.endpointOwnerAccount,
-                endpointOwner: this.endpointOwner,
-                oldPrimaryBeneficiaryAccount: this.oldPrimaryBeneficiaryAccount,
-                oldSecondaryBeneficiaryAccount: this.oldSecondaryBeneficiaryAccount,
-                newPrimaryBeneficiaryAuthority: this.newPrimaryBeneficiaryAuthority,
-                newPrimaryBeneficiaryAccount: this.newPrimaryBeneficiaryAccount,
-                newSecondaryBeneficiaryAuthority: this.newSecondaryBeneficiaryAuthority,
-                newSecondaryBeneficiaryAccount: this.newSecondaryBeneficiaryAccount,
-                settings: this.settings,
-                claim: { create: { ...this.claim } },
-                signature: { connect: { id: this.signatureId } }
-            }
+            data: { ...this }
         });
     }
 }

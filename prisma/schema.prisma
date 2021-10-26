@@ -56,10 +56,6 @@ model Claim {
   claimInstruction ClaimInstruction?
   stakeInstruction StakeInstruction?
 
-  addressStakedCommunityAccount   String?
-  addressStakedCommunityCommunity String?
-  TransferEndpointInstruction     TransferEndpointInstruction[]
-  ChangeBeneficiariesInstruction  ChangeBeneficiariesInstruction[]
   @@index([destination])
 }
 
@@ -156,8 +152,6 @@ model TransferEndpointInstruction {
   id                   Int                   @id @default(autoincrement())
   signature            StakeProgramSignature @relation(fields: [signatureId], references: [id])
   signatureId          Int
-  claim                Claim                 @relation(fields: [claimId], references: [id])
-  claimId              Int                   @unique
   payer                String
   endpoint             String
   endpointOwnerAccount String
@@ -171,8 +165,6 @@ model ChangeBeneficiariesInstruction {
   id                               Int                   @id @default(autoincrement())
   signature                        StakeProgramSignature @relation(fields: [signatureId], references: [id])
   signatureId                      Int
-  claim                            Claim                 @relation(fields: [claimId], references: [id])
-  claimId                          Int                   @unique
   payer                            String
   endpoint                         String
   endpointOwnerAccount             String
