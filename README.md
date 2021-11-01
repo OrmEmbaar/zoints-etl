@@ -1,28 +1,28 @@
-# zee-etl
+# Zeetl
 
 An ETL for ZEE. Run in it Docker or import it as a Node libary.
 
 ## Requirements
 
-- Postgres
-- Node 16.x or Docker
+-   Postgres
+-   Node 16.x or Docker
 
 ## Run in Docker
 
 The ETL can be started with Docker. Its config is set exclusively via environment variables. The following table dictates options and requirements.
 
-| Environment Variable |               Description              |  Default  | Required |
-|:--------------------:|:--------------------------------------:|:---------:|:--------:|
+| Environment Variable |              Description               |  Default  | Required |
+| :------------------: | :------------------------------------: | :-------: | :------: |
 |  STAKING_PROGRAM_ID  | The address of the ZEE staking program |     -     |   true   |
-|      SOLANA_URL      |        URL of the Solana RPC API       |     -     |   true   |
-|   POSTGRES_PASSWORD  |            Postgres password           |     -     |   true   |
-|     POSTGRES_USER    |              Postgres user             |   admin   |   false  |
-|     POSTGRES_HOST    |              Postgres host             | localhost |   false  |
-|     POSTGRES_PORT    |              Postgres port             |    5432   |   false  |
-|   POSTGRES_DATABASE  |            Postgres database           |  zee-etl  |   false  |
-|   SOLANA_RATE_LIMIT  |   Min time between API requests in ms  |    250    |   false  |
-|        LOG_LVL       |              The log level             |    info   |   false  |
-|      LOG_SILENT      |           Set logs to silent           |   false   |   false  |
+|      SOLANA_URL      |       URL of the Solana RPC API        |     -     |   true   |
+|  POSTGRES_PASSWORD   |           Postgres password            |     -     |   true   |
+|    POSTGRES_USER     |             Postgres user              |   admin   |  false   |
+|    POSTGRES_HOST     |             Postgres host              | localhost |  false   |
+|    POSTGRES_PORT     |             Postgres port              |   5432    |  false   |
+|  POSTGRES_DATABASE   |           Postgres database            |  zee-etl  |  false   |
+|  SOLANA_RATE_LIMIT   |  Min time between API requests in ms   |    250    |  false   |
+|       LOG_LVL        |             The log level              |   info    |  false   |
+|      LOG_SILENT      |           Set logs to silent           |   false   |  false   |
 
 The easiest way to pass environment variables is to create a `.env` file containing your configuration. Here is an example:
 
@@ -37,15 +37,15 @@ Next, migrate the database schema.
 
 ```bash
 // Insert the correct version.
-docker run --rm --network host --env-file .env ormembaar/zee-etl:VERSION bin/migrate
+docker run --rm --network host --env-file .env ormembaar/zeetl:VERSION bin/migrate
 ```
 
 Finally, start the ETL.
 
 ```bash
 // Again, insert the version
-docker run -d --network host --env-file .env --name=zee-etl ormembaar/zee-etl:VERSION
-``` 
+docker run -d --network host --env-file .env --name=zeetl ormembaar/zeetl:VERSION
+```
 
 ## Import as library
 
