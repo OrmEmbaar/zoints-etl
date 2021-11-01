@@ -25,7 +25,7 @@ async function main() {
     etl.on('error', (msg, err) => log.error(msg, err));
 
     etl.start();
-    log.info('Started ETL');
+    log.info('ETL started');
 }
 
 main().catch((e) => log.error(`Error starting ETL`, e));
