@@ -19,7 +19,7 @@ The ETL can be started with Docker. Its config is set exclusively via environmen
 |    POSTGRES_USER     |             Postgres user              |   admin   |  false   |
 |    POSTGRES_HOST     |             Postgres host              | localhost |  false   |
 |    POSTGRES_PORT     |             Postgres port              |   5432    |  false   |
-|  POSTGRES_DATABASE   |           Postgres database            |  zee-etl  |  false   |
+|  POSTGRES_DATABASE   |           Postgres database            |   zeetl   |  false   |
 |  SOLANA_RATE_LIMIT   |  Min time between API requests in ms   |    250    |  false   |
 |       LOG_LVL        |             The log level              |   info    |  false   |
 |      LOG_SILENT      |           Set logs to silent           |   false   |  false   |

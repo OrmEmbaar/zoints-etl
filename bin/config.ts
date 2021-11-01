@@ -79,7 +79,7 @@ function loadAppConfig(): Config {
     const user = getEnvVar('POSTGRES_USER', parseStringVar, 'postgres');
     const host = getEnvVar('POSTGRES_HOST', parseStringVar, 'localhost');
     const port = getEnvVar('POSTGRES_PORT', parseStringVar, '5432');
-    const name = getEnvVar('POSTGRES_DATABASE', parseStringVar, 'zee-etl');
+    const name = getEnvVar('POSTGRES_DATABASE', parseStringVar, 'zeetl');
     const pgURL = `postgresql://${user}:${password}@${host}:${port}/${name}`;
 
     return {
