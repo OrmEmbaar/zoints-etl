@@ -1,5 +1,3 @@
-import 'module-alias/register';
-
 export { ETL } from './etl';
 export { ETLParams } from './types';
 

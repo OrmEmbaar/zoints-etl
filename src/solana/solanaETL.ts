@@ -10,7 +10,7 @@ import {
 import Bottleneck from 'bottleneck';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
-import { PrismaClient } from '@generated/client';
+import { PrismaClient } from '../generated/client';
 import { ETLEvents, ETLParams } from '../types';
 
 export interface UnprocessedSignature

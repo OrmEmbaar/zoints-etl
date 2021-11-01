@@ -1,4 +1,4 @@
-import { PrismaClient, PrismaPromise } from '@generated/client';
+import { PrismaClient, PrismaPromise } from '../../generated/client';
 import {
     AmountSchema,
     AuthoritySchema,
