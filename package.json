@@ -1,6 +1,6 @@
 {
-    "name": "@factoshi/zee-etl",
-    "description": "ETL for Solana ZEE transactions",
+    "name": "@factoshi/zeetl",
+    "description": "ETL for Solana ZEE program transactions",
     "author": "OrmEmbaar",
     "version": "0.1.0",
     "main": "src/index.js",
@@ -8,13 +8,13 @@
     "module": "src/index.js",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Factoshi/zee-etl.git"
+        "url": "git+https://github.com/Factoshi/zeetl.git"
     },
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/Factoshi/zee-etl/issues"
+        "url": "https://github.com/Factoshi/zeetl/issues"
     },
-    "homepage": "https://github.com/Factoshi/zee-etl#readme",
+    "homepage": "https://github.com/Factoshi/zeetl#readme",
     "scripts": {
         "postinstall": "prisma generate",
         "start": "nodemon bin/start.ts",
