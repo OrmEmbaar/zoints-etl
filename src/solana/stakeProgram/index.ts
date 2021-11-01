@@ -1,4 +1,4 @@
-import { PrismaClient, StakeProgramSignature } from '@prisma/client';
+import { PrismaClient, StakeProgramSignature } from '@generated/client';
 import { Connection, PublicKey } from '@solana/web3.js';
 
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
@@ -72,7 +72,7 @@ export default class StakeProgramETL extends SolanaETL {
             }
 
             const parsedInstructions: Instruction[] = [];
-            const instructions = this.formatAccountInstructions(tx, this.stakeProgramId);
+            const instructions = this.filterAccountInstructions(tx, this.stakeProgramId);
 
             for (const { instruction, inner } of instructions) {
                 const parsedInstruc = Instruction.new(signature.id, instruction, inner[0]);

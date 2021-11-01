@@ -10,7 +10,7 @@ generator client {
   // linux-musl is necessary for it to work with alpine
   binaryTargets = ["native", "linux-musl"]
   provider      = "prisma-client-js"
-  output        = "client"
+  output        = "../src/generated/client"
 }
 
 ////////////////////////////
@@ -63,14 +63,14 @@ model InitInstruction {
   id                Int                   @id @default(autoincrement())
   signature         StakeProgramSignature @relation(fields: [signatureId], references: [id])
   signatureId       Int
-  unbondingDuration Int
-  startTime         DateTime              @db.Timestamp
   payer             String
   settingsAccount   String
   poolAuthority     String
   rewardPool        String
   zeeTokenMint      String
   splTokenProgam    String
+  startTime         DateTime              @db.Timestamp
+  unbondingDuration Int
 }
 
 model RegisterEndpointInstruction {

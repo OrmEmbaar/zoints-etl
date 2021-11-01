@@ -27,11 +27,12 @@
     },
     "dependencies": {
         "@prisma/client": "^3.3.0",
-        "@zoints/staking": "^1.0.0",
+        "@zoints/staking": "^1.0.2",
         "bottleneck": "^2.19.5",
         "bs58": "^4.0.1",
         "dotenv": "^10.0.0",
         "dotenv-expand": "^5.1.0",
+        "module-alias": "^2.2.2",
         "prisma": "^3.3.0",
         "tiny-typed-emitter": "^2.1.0",
         "tslog": "^3.2.2"
@@ -39,6 +40,7 @@
     "devDependencies": {
         "@types/bs58": "^4.0.1",
         "@types/dotenv": "^8.2.0",
+        "@types/module-alias": "^2.0.1",
         "@types/node": "^16.10.9",
         "nodemon": "^2.0.13",
         "ts-node": "^10.3.0",
@@ -62,5 +64,9 @@
     "bin": {
         "etl-migrate": "bin/migrate.js",
         "etl-start": "bin/start.js"
+    },
+    "_moduleAliases": {
+        "@src": "src",
+        "@generated": "src/generated"
     }
 }

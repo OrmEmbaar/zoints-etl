@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import 'module-alias/register';
 import config from './config';
 import { Connection } from '@solana/web3.js';
-import { log } from '../src/logger';
-import { ETL } from '../src/etl';
+import { log } from '@src/logger';
+import { ETL } from '@src/etl';
 
 async function main() {
     log.setSettings({

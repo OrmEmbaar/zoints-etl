@@ -1,4 +1,3 @@
-import { PrismaClient } from '.prisma/client';
 import {
     Connection,
     ConfirmedSignatureInfo,
@@ -11,6 +10,7 @@ import {
 import Bottleneck from 'bottleneck';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
+import { PrismaClient } from '@generated/client';
 import { ETLEvents, ETLParams } from '../types';
 
 export interface UnprocessedSignature
@@ -37,8 +37,8 @@ export abstract class SolanaETL {
     /**
      * Filters and formats transacgion instructions for the given account.
      */
-    protected formatAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
-        const formatted: {
+    protected filterAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
+        const filtered: {
             instruction: PartiallyDecodedInstruction;
             inner: ParsedInnerInstruction[];
         }[] = [];
@@ -51,9 +51,9 @@ export abstract class SolanaETL {
             if (!inner) {
                 throw new Error(`Missing inner instructions: ${tx.transaction.signatures[0]}`);
             }
-            formatted.push({ instruction: instruction as PartiallyDecodedInstruction, inner });
+            filtered.push({ instruction: instruction as PartiallyDecodedInstruction, inner });
         }
-        return formatted;
+        return filtered;
     }
 
     /**
@@ -86,7 +86,10 @@ export abstract class SolanaETL {
         let inserted = 0;
         for (const sig of signatures.reverse()) {
             if (sig.err) {
-                this.event.emit('warn', `Skipping failed signature ${sig.signature} ${sig.err}`);
+                this.event.emit(
+                    'warn',
+                    `Skipping failed signature ${sig.signature} ${JSON.stringify(sig.err)}`
+                );
                 continue;
             }
             if (!sig.blockTime) {
