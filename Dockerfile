@@ -13,6 +13,7 @@ COPY tsconfig.json ./
 COPY src ./src
 COPY bin ./bin
 RUN npm run build
+RUN npx prisma generate && cp -r src/generated dist/src/generated
 
 # Installer stage installs production dependencies
 FROM node:16.10-alpine3.14 AS Installer
