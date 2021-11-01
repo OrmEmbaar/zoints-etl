@@ -1,0 +1,208 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+generator client {
+  // linux-musl is necessary for it to work with alpine
+  binaryTargets = ["native", "linux-musl"]
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client"
+}
+
+////////////////////////////
+// Stake Program
+////////////////////////////
+
+model StakeProgramSignature {
+  id                             Int                              @id @default(autoincrement())
+  signature                      String                           @unique
+  blockTime                      DateTime
+  slot                           BigInt                           @db.BigInt
+  recentBlockHash                String?
+  fee                            BigInt?                          @db.BigInt
+  processed                      Boolean                          @default(false)
+  claim                          Claim[]
+  initInstructions               InitInstruction[]
+  registerEndpointInstructions   RegisterEndpointInstruction[]
+  initStakeInstruction           InitStakeInstruction[]
+  stakeInstructions              StakeInstruction[]
+  withdrawUnboundInstructions    WithdrawUnboundInstruction[]
+  claimInstructions              ClaimInstruction[]
+  TransferEndpointInstruction    TransferEndpointInstruction[]
+  ChangeBeneficiariesInstruction ChangeBeneficiariesInstruction[]
+
+  @@index([processed])
+  @@index([blockTime])
+}
+
+enum ClaimOrigin {
+  ClaimInstruction
+  StakeInstruction
+}
+
+model Claim {
+  id               Int                   @id @default(autoincrement())
+  signature        StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId      Int
+  amount           BigInt                @db.BigInt
+  authority        String
+  source           String
+  destination      String
+  claimOrigin      ClaimOrigin
+  claimInstruction ClaimInstruction?
+  stakeInstruction StakeInstruction?
+
+  @@index([destination])
+}
+
+model InitInstruction {
+  id                Int                   @id @default(autoincrement())
+  signature         StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId       Int
+  payer             String
+  settingsAccount   String
+  poolAuthority     String
+  rewardPool        String
+  zeeTokenMint      String
+  splTokenProgam    String
+  startTime         DateTime              @db.Timestamp
+  unbondingDuration Int
+}
+
+model RegisterEndpointInstruction {
+  id                            Int                   @id @default(autoincrement())
+  signature                     StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId                   Int
+  payer                         String
+  endpointAccount               String
+  endpointOwnerPubkey           String
+  primaryBeneficiaryAuthority   String
+  primaryBeneficiaryAccount     String
+  secondaryBeneficiaryAuthority String
+  secondaryBeneficiaryAccount   String
+  authorityAddress              String
+  authorityType                 Int                   @db.SmallInt
+}
+
+model InitStakeInstruction {
+  id                Int                   @id @default(autoincrement())
+  signature         StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId       Int
+  payer             String
+  staker            String
+  stakerFund        String
+  stakerBeneficiary String
+  endpointAccount   String
+  stakeAccount      String
+}
+
+model StakeInstruction {
+  id                           Int                   @id @default(autoincrement())
+  signature                    StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId                  Int
+  claim                        Claim                 @relation(fields: [claimId], references: [id])
+  claimId                      Int                   @unique
+  stake                        BigInt                @db.BigInt
+  payer                        String
+  staker                       String
+  stakerBeneficiary            String
+  stakerFund                   String
+  stakerZeeTokenAccount        String
+  endpoint                     String
+  endpointPrimaryBeneficiary   String
+  endpointSecondaryBeneficiary String
+  poolAuthority                String
+  settings                     String
+  stakeAccount                 String
+}
+
+model WithdrawUnboundInstruction {
+  id                    Int                   @id @default(autoincrement())
+  signature             StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId           Int
+  payer                 String
+  stakeAccount          String
+  staker                String
+  stakerFund            String
+  stakerZeeTokenAccount String
+  endpoint              String
+  settings              String
+  poolAuthority         String
+}
+
+model ClaimInstruction {
+  id                       Int                   @id @default(autoincrement())
+  signature                StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId              Int
+  claim                    Claim                 @relation(fields: [claimId], references: [id])
+  claimId                  Int                   @unique
+  payer                    String
+  beneficiaryAuthority     String
+  beneficiaryAccount       String
+  authorityZeeTokenAccount String
+  settings                 String
+  poolAuthority            String
+}
+
+model TransferEndpointInstruction {
+  id                   Int                   @id @default(autoincrement())
+  signature            StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId          Int
+  payer                String
+  endpoint             String
+  endpointOwnerAccount String
+  endpointOwnerSigner  String
+  recipient            String
+  authorityAddress     String
+  authorityType        Int                   @db.SmallInt
+}
+
+model ChangeBeneficiariesInstruction {
+  id                               Int                   @id @default(autoincrement())
+  signature                        StakeProgramSignature @relation(fields: [signatureId], references: [id])
+  signatureId                      Int
+  payer                            String
+  endpoint                         String
+  endpointOwnerAccount             String
+  endpointOwnerSigner              String
+  oldPrimaryBeneficiaryAccount     String
+  oldSecondaryBeneficiaryAccount   String
+  newPrimaryBeneficiaryAuthority   String
+  newPrimaryBeneficiaryAccount     String
+  newSecondaryBeneficiaryAuthority String
+  newSecondaryBeneficiaryAccount   String
+  settings                         String
+}
+
+////////////////////////////
+// ZEE SPL Transfer
+////////////////////////////
+
+model ZeeSplSignature {
+  id              Int                   @id @default(autoincrement())
+  signature       String                @unique
+  blockTime       DateTime
+  slot            BigInt                @db.BigInt
+  recentBlockHash String?
+  fee             BigInt?               @db.BigInt
+  processed       Boolean               @default(false)
+  postBalances    PostTransferBalance[]
+
+  @@index([processed])
+  @@index([blockTime])
+}
+
+model PostTransferBalance {
+  signature      ZeeSplSignature @relation(fields: [signatureId], references: [id])
+  signatureId    Int
+  account        String
+  amount         BigInt          @db.BigInt
+  uiAmount       Float?
+  uiAmountString String?
+
+  @@id([signatureId, account])
+}
