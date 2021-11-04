@@ -1,18 +1,18 @@
-#!/usr/bin/env node
-import config from './config';
-import { exec } from 'child_process';
+import util from 'util';
+import child from 'child_process';
+import log from '../src/logger';
 
-// The Prisma CLI reads the POSTGRES_URL environment variable
-process.env.POSTGRES_URL = config.postgresURL;
+const exec = util.promisify(child.exec);
 
-exec(`npx prisma migrate deploy`, (error, stdout, stderr) => {
-    if (error) {
-        console.log(`error: ${error.message}`);
-        return;
-    }
+export async function migrate(postgresURL: string) {
+    // The Prisma CLI expects the POSTGRES_URL env var.
+    process.env.POSTGRES_URL = postgresURL;
+
+    const { stdout, stderr } = await exec('npx prisma migrate deploy');
     if (stderr) {
-        console.log(`stderr: ${stderr}`);
-        return;
+        log.error(stderr);
     }
-    console.log(`stdout: ${stdout}`);
-});
+    if (stdout) {
+        log.info(stdout);
+    }
+}
