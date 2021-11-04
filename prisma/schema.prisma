@@ -10,7 +10,7 @@ generator client {
   // linux-musl is necessary for it to work with alpine
   binaryTargets = ["native", "linux-musl"]
   provider      = "prisma-client-js"
-  output        = "../src/generated/client"
+  output        = "../client/generated"
 }
 
 ////////////////////////////

@@ -1,6 +1,4 @@
-import { TypedEmitter } from 'tiny-typed-emitter';
-
-import { PrismaClient } from './generated/client';
+import { PrismaClient } from '../client';
 import StakeProgramETL from './solana/stakeProgram';
 import TokenMintETL from './solana/tokenBalances';
 import { ETLParams, ETLEvents } from './types';

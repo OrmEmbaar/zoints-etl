@@ -1,6 +1,6 @@
 import { PrismaClient, StakeProgramSignature } from '../../generated/client';
 import { Connection, PublicKey } from '@solana/web3.js';
-
+import { PrismaClient, StakeProgramSignature } from '../../../client';
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
 import { ETLEvents, ETLParams } from '../../types';
 import { Instruction } from './instruction';

@@ -1,0 +1,13 @@
+{
+    "name": "@zoints/etl-client",
+    "description": "A Prisma client for the ZEE ETL.",
+    "author": "OrmEmbaar",
+    "version": "0.1.0",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "prepub": "rm -rf generated && npx prisma generate --schema ../prisma/schema.prisma",
+        "pub": "npm publish --access public --dry-run"
+    },
+    "license": "MIT"
+}

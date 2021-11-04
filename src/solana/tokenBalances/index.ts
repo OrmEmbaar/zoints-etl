@@ -1,4 +1,4 @@
-import { PrismaClient, ZeeSplSignature, PostTransferBalance } from '../../generated/client';
+import { PrismaClient, ZeeSplSignature, PostTransferBalance } from '../../../client';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { TypedEmitter } from 'tiny-typed-emitter';
 
