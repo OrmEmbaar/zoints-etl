@@ -1,10 +1,9 @@
-import { PrismaClient, StakeProgramSignature } from '../../generated/client';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { PrismaClient, StakeProgramSignature } from '../../../client';
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
-import { ETLEvents, ETLParams } from '../../types';
+import { ETLParams } from '../../types';
 import { Instruction } from './instruction';
-import { TypedEmitter } from 'tiny-typed-emitter';
+import log from '../../logger';
 
 export * from './instruction';
 
@@ -17,8 +16,8 @@ export default class StakeProgramETL extends SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
 
-    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
-        super(params, prisma, ee);
+    constructor(params: ETLParams, prisma: PrismaClient) {
+        super(params, prisma);
         this.connection = params.connection;
         this.prisma = prisma;
         this.stakeProgramId = params.stakeProgramId;
@@ -37,7 +36,7 @@ export default class StakeProgramETL extends SolanaETL {
         };
         const n = await this.syncAccountSignatures(this.stakeProgramId, insert, res?.signature);
         if (n > 0) {
-            this.event.emit('newSignatures', 'stake program', n);
+            log.debug(`inserted ${n} new staking program signatures`);
         }
     }
 
@@ -45,7 +44,7 @@ export default class StakeProgramETL extends SolanaETL {
      *
      */
     private handleMissingTransaction(sig: StakeProgramSignature) {
-        this.event.emit('warn', `Missing transaction ${sig.signature}`);
+        log.warn(`Missing transaction ${sig.signature}`);
         return this.prisma.stakeProgramSignature.update({
             where: { id: sig.id },
             data: { processed: true }
@@ -64,7 +63,7 @@ export default class StakeProgramETL extends SolanaETL {
             });
         };
 
-        let count = 0;
+        let n = 0;
         for await (const { tx, signature } of this.getUnprocessedPairs(getUnprocessedSigs)) {
             if (tx === null) {
                 await this.handleMissingTransaction(signature);
@@ -77,7 +76,7 @@ export default class StakeProgramETL extends SolanaETL {
             for (const { instruction, inner } of instructions) {
                 const parsedInstruc = Instruction.new(signature.id, instruction, inner[0]);
                 parsedInstructions.push(parsedInstruc);
-                count++;
+                n++;
             }
 
             const signatureUpdate = {
@@ -94,8 +93,8 @@ export default class StakeProgramETL extends SolanaETL {
                 ...parsedInstructions.map((i) => i.insert(this.prisma))
             ]);
         }
-        if (count > 0) {
-            this.event.emit('newInstructions', count);
+        if (n > 0) {
+            log.debug(`inserted ${n} new staking program instructions`);
         }
     }
 

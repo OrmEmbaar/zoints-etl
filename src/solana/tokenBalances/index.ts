@@ -1,9 +1,8 @@
 import { PrismaClient, ZeeSplSignature, PostTransferBalance } from '../../../client';
 import { Connection, PublicKey } from '@solana/web3.js';
-import { TypedEmitter } from 'tiny-typed-emitter';
-
-import { ETLEvents, ETLParams } from '../../types';
+import { ETLParams } from '../../types';
 import { SolanaETL, UnprocessedSignature } from '../solanaETL';
+import log from '../../logger';
 
 /**
  * TokenMintETL extracts, transforms and loads ZEE token transfers
@@ -13,8 +12,8 @@ export default class TokenMintETL extends SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
 
-    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
-        super(params, prisma, ee);
+    constructor(params: ETLParams, prisma: PrismaClient) {
+        super(params, prisma);
         this.connection = params.connection;
         this.prisma = prisma;
     }
@@ -32,20 +31,18 @@ export default class TokenMintETL extends SolanaETL {
                 rejectOnNotFound: true
             })
         ]);
-
         const zeeTokenMint = new PublicKey(initInstruction.zeeTokenMint);
         const insert = async (data: UnprocessedSignature) => {
             return this.prisma.zeeSplSignature.create({ data });
         };
-
-        const inserted = await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
-        if (inserted > 0) {
-            this.event.emit('newSignatures', 'token mint', inserted);
+        const n = await this.syncAccountSignatures(zeeTokenMint, insert, sig?.signature);
+        if (n > 0) {
+            log.debug(`inserted ${n} new ZEE token mint signatures`);
         }
     }
 
     private handleMissingTransaction(sig: ZeeSplSignature) {
-        this.event.emit('warn', `Missing transaction ${sig.signature}`);
+        log.warn(`Missing transaction ${sig.signature}`);
         return this.prisma.zeeSplSignature.update({
             where: { id: sig.id },
             data: { processed: true }
@@ -66,7 +63,7 @@ export default class TokenMintETL extends SolanaETL {
             rejectOnNotFound: true
         });
 
-        let count = 0;
+        let n = 0;
         for await (const { tx, signature } of this.getUnprocessedPairs(getUnprocessedSigs)) {
             if (tx === null) {
                 await this.handleMissingTransaction(signature);
@@ -104,10 +101,10 @@ export default class TokenMintETL extends SolanaETL {
                 ...balances.map((data) => this.prisma.postTransferBalance.create({ data }))
             ]);
 
-            count += balances.length;
+            n += balances.length;
         }
-        if (count > 0) {
-            this.event.emit('newTransfers', count);
+        if (n > 0) {
+            log.debug(`${n} new ZEE balance transfers`);
         }
     }
 

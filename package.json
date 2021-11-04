@@ -1,29 +1,14 @@
 {
-    "name": "@factoshi/zeetl",
+    "name": "@zoints/etl",
     "description": "ETL for Solana ZEE program transactions",
     "author": "OrmEmbaar",
     "version": "0.1.0",
-    "main": "src/index.js",
-    "types": "src/index.d.ts",
-    "module": "src/index.js",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/Factoshi/zeetl.git"
-    },
     "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/Factoshi/zeetl/issues"
-    },
-    "homepage": "https://github.com/Factoshi/zeetl#readme",
     "scripts": {
-        "postinstall": "prisma generate",
-        "start": "nodemon bin/start.ts",
+        "start": "nodemon bin/index.ts start",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "rm -rf dist && tsc",
-        "build:check": "tsc --noEmit",
-        "prepub": "rm -rf dist && tsc && cp -r prisma README.md package*.json dist",
-        "pub": "npm publish ./dist --access public",
-        "postpub": "rm -rf dist"
+        "build": "rm -rf dist && mkdir dist && prisma generate && cp -r client dist/client && cp -r prisma dist/prisma && tsc",
+        "build:check": "tsc --noEmit"
     },
     "dependencies": {
         "@prisma/client": "^3.3.0",
@@ -32,8 +17,8 @@
         "bs58": "^4.0.1",
         "commander": "^8.3.0",
         "prisma": "^3.3.0",
-        "tiny-typed-emitter": "^2.1.0",
-        "tslog": "^3.2.2"
+        "winston": "^3.3.3",
+        "winston-slack-webhook-transport": "^2.1.0"
     },
     "devDependencies": {
         "@types/bs58": "^4.0.1",
@@ -42,24 +27,5 @@
         "nodemon": "^2.0.13",
         "ts-node": "^10.3.0",
         "typescript": "^4.4.4"
-    },
-    "peerDependencies": {
-        "@solana/web3.js": "^1.29.2"
-    },
-    "keywords": [
-        "zee",
-        "zoints",
-        "solana",
-        "etl"
-    ],
-    "files": [
-        "src",
-        "bin",
-        "prisma",
-        "README.md"
-    ],
-    "bin": {
-        "etl-migrate": "bin/migrate.js",
-        "etl-start": "bin/start.js"
     }
 }

@@ -9,6 +9,8 @@ import {
 } from '@solana/web3.js';
 import Bottleneck from 'bottleneck';
 import { PrismaClient } from '../../client';
+import log from '../logger';
+import { ETLParams } from '../types';
 
 export interface UnprocessedSignature
     extends Omit<ConfirmedSignatureInfo, 'err' | 'blockTime' | 'memo'> {
@@ -22,17 +24,15 @@ export abstract class SolanaETL {
     connection: Connection;
     prisma: PrismaClient;
     limiter: SolanaLimiter;
-    event: TypedEmitter<ETLEvents>;
 
-    constructor(params: ETLParams, prisma: PrismaClient, ee: TypedEmitter<ETLEvents>) {
+    constructor(params: ETLParams, prisma: PrismaClient) {
         this.connection = params.connection;
         this.prisma = prisma;
         this.limiter = SolanaLimiter.getInstance(params.rateLimit);
-        this.event = ee;
     }
 
     /**
-     * Filters and formats transacgion instructions for the given account.
+     * Filters and formats transaction instructions for the given account.
      */
     protected filterAccountInstructions(tx: ParsedConfirmedTransaction, account: PublicKey) {
         const filtered: {
@@ -79,18 +79,15 @@ export abstract class SolanaETL {
             opts.before = sigs[sigs.length - 1]?.signature;
         }
 
-        // Reverse signatures to generate in chronological order
+        // Reverse signatures to insert in chronological order
         let inserted = 0;
         for (const sig of signatures.reverse()) {
             if (sig.err) {
-                this.event.emit(
-                    'warn',
-                    `Skipping failed signature ${sig.signature} ${JSON.stringify(sig.err)}`
-                );
+                log.warn(`Skipping failed signature ${sig.signature} ${JSON.stringify(sig.err)}`);
                 continue;
             }
             if (!sig.blockTime) {
-                this.event.emit('warn', `Missing block time ${sig.signature}`);
+                log.warn(`Missing block time ${sig.signature}`);
                 continue;
             }
             const data = {
@@ -159,7 +156,7 @@ class SolanaLimiter {
         this.bottleneck = new Bottleneck({ minTime });
     }
 
-    public static getInstance(minTime: number = 250) {
+    public static getInstance(minTime: number) {
         if (SolanaLimiter.instance) {
             return SolanaLimiter.instance;
         }
