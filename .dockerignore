@@ -1,0 +1,10 @@
+node_modules
+dist
+client/generated
+.env
+.gitignore
+.prettierrc
+docker-compose.*
+LICENSE
+Makefile
+README.md
