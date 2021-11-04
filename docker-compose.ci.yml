@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+    postgres:
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+    etl:
+        build: .
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        command: ['node', 'bin', 'start', '--migrate', '--pg-host', 'postgres']
+        environment:
+            - STAKING_PROGRAM_ID
+            - SOLANA_URL
+            - PG_PASSWORD
+
+volumes:
+    postgres_data:

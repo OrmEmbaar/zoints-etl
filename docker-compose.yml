@@ -1,19 +1,14 @@
 version: '3.8'
 services:
-    db:
-        container_name: zeeETL
+    postgres:
         image: postgres:13.3-alpine
-        restart: always
+        restart: unless-stopped
         environment:
-            POSTGRES_PASSWORD: ${PG_PASSWORD:-dummy}
+            POSTGRES_PASSWORD: ${PG_PASSWORD}
         ports:
-            - '5432:5432'
-    pgadmin:
-        container_name: pgadmin4
-        image: dpage/pgadmin4
-        restart: always
-        environment:
-            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-factoshi@example.com}
-            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-dummy}
-        ports:
-            - '5050:80'
+            - '127.0.0.1:5432:5432'
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready']
+            interval: 6s
+            retries: 10
+            timeout: 5s
